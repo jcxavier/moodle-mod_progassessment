@@ -1,0 +1,16 @@
+		.trigger{
+			cursor:pointer;
+		}		
+		.trigger:hover{
+			cursor:pointer;
+			background:#ddf;
+		}		
+		.expanded{
+			background:#ccf;
+			cursor:pointer;
+		}
+		.expanded:hover{
+			background:#eef;
+			cursor:pointer;
+		}
+		

@@ -1,0 +1,129 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html dir="ltr" xml:lang="en" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" /> 
+	<title>domCollapse</title>
+	<style type="text/css">
+		@import "../../ottools.css";
+		/* domCollapse styles */
+		@import "domcollapse.css";
+	</style>
+	<script type="text/javascript" src="domcollapse.js"></script>
+</head>
+<body>
+<div id="debug"></div>
+<div id="boundary">
+<div id="header"><a href="/"><img src="http://www.onlinetools.org/img/otlogo.gif" alt="Onlinetools.org" /></a></div>
+<div id="content">
+	<h1><code>domCollapse</code></h1>
+	<h2 class="expanded">What is <code>domCollapse</code>?</h2>
+	<div>
+		<p><code>domCollapse</code> allows you to collapse and expand parts of page by activating 
+		other parts of a page.</p>
+		<p>To define a element that expands or collapses others add the class 
+		<code>trigger</code> to it as an attribute. This will automatically 
+		collapse the next following element in the document tree and add the functionality
+		to alternately collapse and expand it.</p> 
+		<p>The collapsing and expanding is achieved by adding and
+		removing classes from the elements. This means you do not need to know 
+		any Javascript to make <code>domCollapse</code> behave differently.</p>
+	</div>
+	<h2 class="trigger">How to install <code>domCollapse</code></h2>
+	<div>
+		<p>To install <code>domCollapse</code>, simply add it to the head of your HTML document:</p>
+		<pre>&#60;script type=&#34;text/javascript&#34; src=&#34;domcollapse.js&#34;&#62;&#60;/script&#62;</pre>	
+		<p><code>domCollapse</code> adds itself to the <code>onload</code> event of 
+		the current window, and does not overwrite other scripts. It is fully self-contained in 
+		one big object.</p>
+		<p><code>domCollapse</code> checks if the browser is capable of collapsing and expanding
+		elements and only applies the functionality if that is the case.</p>
+	</div>
+	<h2 class="trigger">How to use <code>domCollapse</code></h2>
+	<div>
+		<h3>Using <code>domCollapse</code> with your HTML/CSS</h3>
+		<p>To use <code>domCollapse</code> in your pages simply add the class <code>trigger</code> to any 
+		element, and it will be converted into a clickable element that collapses and expands the following element.</p> 
+		<p>If you want the element to become a trigger, but avoid initially collapsing the 
+		following element use the class <code>expanded</code>.</p>
+		<p>Out-of-the-box, <code>domCollapse</code> checks every
+		element in the document for these class, which might be a bit slow when you
+		deal with very large documents. To cut down the looping time, you can 
+		define which elements to check for the class by changing the <code>triggerElements</code> attribute:</p>
+		<pre>triggerElements:'*'</pre>
+		<p>For example, if you want to turn all headers level 2 into triggers, you 
+		add the trigger class to them and use:</p>
+		<pre>triggerElements:'h2'</pre>
+		<p>If you want to only collapse all h2 inside the element with the ID 'content', then you need to 
+		change two attributes:</p>
+		<pre>
+triggerElements:'h2',
+parentElementId:'content',
+		</pre>
+		<p>If you want to allow only one of the triggers to be expanded and collapse 
+		all the others, you can set the <code>uniquecollapse</code> attribute to true:</p>
+		<pre>uniqueCollapse:true,</pre>
+		<h3>Styling <code>domCollapse</code></h3>
+		<p><code>domCollapse</code> functions by adding and removing classes to the elements in 
+		question rather than setting the style attributes directly. This gives you 
+		full control over the look and feel by changing your CSS:</p>
+		<dl>
+			<dt>trigger</dt>
+			<dd>defines the look of the trigger element when the target element is 
+			collapsed.</dd>
+			<dt>expanded</dt>
+			<dd>defines the look of the trigger element when the target element is 
+			expanded.</dd>
+			<dt>show</dt>
+			<dd>defines the look of the target element when it is expanded.</dd>
+			<dt>hide</dt>
+			<dd>defines the look of the target element when it is collapsed.</dd>
+		</dl>
+		<p>Each of these names can be changed by changing the attributes at the 
+		beginning of the script.</p>	
+		<h3>The indicator images</h3>
+		<p><code>domCollapse</code> adds images to the trigger elements indicating that
+		they are clickable and showing the state. The sources and alternative texts 
+		of these images are defined in the attribute section and default to:</p>
+		<dl>
+			<dt>plus.gif</dt>
+			<dd>indicating the collapsed state with the alternative text 'Expand section'.</dd>
+			<dt>minus.gif</dt>
+			<dd>indicating the expanded state with the alternative text 'Collapse section'.</dd>
+		</dl>
+		<p>The collapse and expand messages will also be applied as a title to the trigger elements</p>
+		<p>An example of the change in markup would be:</p>
+		<pre>&#60;h2 class=&#34;trigger&#34;&#62;How to use &#60;code&#62;domCollapse&#60;/code&#62;&#60;/h2&#62;
+	&#60;div&#62;</pre>
+		<p>Before <code>domCollapse</code> started and </p>
+		
+<pre>&#60;h2 title=&#34;collapse section&#34; class=&#34;expanded&#34;&#62;
+&#60;a href=&#34;#&#34;&#62;&#60;img alt=&#34;collapse section&#34; src=&#34;minus.gif&#34;&#62;&#60;/a&#62;
+How to use &#60;code&#62;domCollapse&#60;/code&#62;&#60;/h2&#62;
+	&#60;div class=&#34;show&#34;&#62;</pre>
+		<p>after it was called for the first time.</p>
+	</div>
+	<h2 class="trigger">Terms of Use</h2>
+	<div>
+		<p><code>domCollapse</code> is provided as-is and the developer does not take any liability for 
+		any damage caused by it.</p>
+		<p><code>domCollapse</code> is <strong>not</strong> open source, and it 
+		is prohibited to change and resell the script.</p>
+		<p>The use of the script is free.</p>
+	</div>
+	<div id="download">
+		<h2>Download <code>domCollapse</code></h2>
+		<ul>
+			<li><a href="domcollapse.zip">domCollapse.zip</a></li>
+			<li>Version 3</li>
+			<li>06.12.2005 (Happy Birthday, Dad!)</li>
+		</ul>
+		<h2>Discuss <code>domCollapse</code></h2>
+		<ul>
+			<li><a href="http://www.wait-till-i.com/index.php?p=72">Check blog</a></li>
+		</ul>
+	</div>
+</div>
+</div>
+</body>
+</html>

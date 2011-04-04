@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="mod/progassessment/db" VERSION="20100329" COMMENT="XMLDB file for Moodle mod/progassessment"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
+  <TABLES>
+    <TABLE NAME="progassessment" COMMENT="Defines programming assessments" NEXT="progassessment_testfiles">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" ENUM="false" NEXT="course"/>
+        <FIELD NAME="course" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" COMMENT="Course progassessment activity belongs to" PREVIOUS="id" NEXT="name"/>
+        <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="course" NEXT="intro"/>
+        <FIELD NAME="intro" TYPE="text" LENGTH="medium" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="name" NEXT="introformat"/>
+        <FIELD NAME="introformat" TYPE="int" LENGTH="4" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" COMMENT="text format of intro field" PREVIOUS="intro" NEXT="introfile"/>
+        <FIELD NAME="introfile" TYPE="int" LENGTH="10" NOTNULL="false" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="introformat" NEXT="maxgrade"/>
+        <FIELD NAME="maxgrade" TYPE="int" LENGTH="3" NOTNULL="true" UNSIGNED="false" DEFAULT="100" SEQUENCE="false" ENUM="false" PREVIOUS="introfile" NEXT="gradingmethod"/>
+        <FIELD NAME="gradingmethod" TYPE="int" LENGTH="3" NOTNULL="true" UNSIGNED="false" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="maxgrade" NEXT="timeavailable"/>
+        <FIELD NAME="timeavailable" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="gradingmethod" NEXT="timedue"/>
+        <FIELD NAME="timedue" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="timeavailable" NEXT="timetolerance"/>
+        <FIELD NAME="timetolerance" TYPE="int" LENGTH="10" NOTNULL="false" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="timedue" NEXT="tolerancepenalty"/>
+        <FIELD NAME="tolerancepenalty" TYPE="int" LENGTH="3" NOTNULL="false" UNSIGNED="false" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="timetolerance" NEXT="duration"/>
+        <FIELD NAME="duration" TYPE="int" LENGTH="10" NOTNULL="false" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="tolerancepenalty" NEXT="proglanguages"/>
+        <FIELD NAME="proglanguages" TYPE="text" LENGTH="medium" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="duration" NEXT="immediatefeedback"/>
+        <FIELD NAME="immediatefeedback" TYPE="int" LENGTH="2" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="proglanguages" NEXT="feedbackdetail"/>
+        <FIELD NAME="feedbackdetail" TYPE="int" LENGTH="2" NOTNULL="true" UNSIGNED="true" SEQUENCE="false" ENUM="false" PREVIOUS="immediatefeedback" NEXT="maxbytes"/>
+        <FIELD NAME="maxbytes" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="100000" SEQUENCE="false" ENUM="false" PREVIOUS="feedbackdetail" NEXT="maxsubmissions"/>
+        <FIELD NAME="maxsubmissions" TYPE="int" LENGTH="3" NOTNULL="true" UNSIGNED="false" DEFAULT="3" SEQUENCE="false" ENUM="false" PREVIOUS="maxbytes" NEXT="timecreated"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="maxsubmissions" NEXT="timemodified"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="timecreated" NEXT="skeletonfile"/>
+        <FIELD NAME="skeletonfile" TYPE="int" LENGTH="10" NOTNULL="false" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false"  PREVIOUS="timemodified" NEXT="dummytestcase"/>
+        <FIELD NAME="dummytestcase" TYPE="int" LENGTH="10" NOTNULL="false" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="skeletonfile" NEXT="serverid"/>
+        <FIELD NAME="serverid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="dummytestcase"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="skeletonfile"/>
+        <KEY NAME="skeletonfile" TYPE="foreign" FIELDS="skeletonfile" REFTABLE="files" REFFIELDS="id" PREVIOUS="primary"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="course" UNIQUE="false" FIELDS="course"/>
+      </INDEXES>
+    </TABLE>
+
+
+    <TABLE NAME="progassessment_testfiles" COMMENT="Contains information of the files that define the test cases for programming assessments"  PREVIOUS="progassessment" NEXT="progassessment_testcases">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" ENUM="false" NEXT="progassessment"/>
+        <FIELD NAME="progassessment" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="id" NEXT="inputfile"/>
+        <FIELD NAME="inputfile" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="progassessment" NEXT="outputfile"/>
+        <FIELD NAME="outputfile" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="inputfile"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="progassessment"/>
+        <KEY NAME="progassessment" TYPE="foreign" FIELDS="progassessment" REFTABLE="progassessment" REFFIELDS="id" PREVIOUS="primary" NEXT="inputfile"/>
+        <KEY NAME="inputfile" TYPE="foreign" FIELDS="inputfile" REFTABLE="files" REFFIELDS="id" PREVIOUS="progassessment" NEXT="outputfile"/>
+        <KEY NAME="outputfile" TYPE="foreign" FIELDS="outputfile" REFTABLE="files" REFFIELDS="id" PREVIOUS="inputfile"/>
+      </KEYS>
+    </TABLE>
+
+
+    <TABLE NAME="progassessment_testcases" COMMENT="Defines test cases for programming assessments"  PREVIOUS="progassessment_testfiles" NEXT="progassessment_submissions">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" ENUM="false" NEXT="progassessment"/>
+        <FIELD NAME="progassessment" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="id" NEXT="weight"/>
+        <FIELD NAME="weight" TYPE="int" LENGTH="4" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="progassessment" NEXT="name"/>
+        <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" ENUM="false" PREVIOUS="weight" NEXT="right_feedback"/>
+        <FIELD NAME="right_feedback" TYPE="text" LENGTH="medium" NOTNULL="false" SEQUENCE="false" ENUM="false" PREVIOUS="name" NEXT="wrong_feedback"/>
+        <FIELD NAME="wrong_feedback" TYPE="text" LENGTH="medium" NOTNULL="false" SEQUENCE="false" ENUM="false" PREVIOUS="right_feedback" NEXT="input"/>
+        <FIELD NAME="input" TYPE="text" LENGTH="big" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="wrong_feedback" NEXT="output"/>
+        <FIELD NAME="output" TYPE="text" LENGTH="big" NOTNULL="true" SEQUENCE="false" ENUM="false" PREVIOUS="input" NEXT="testfile"/>
+        <FIELD NAME="testfile" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="output" NEXT="serverid"/>
+        <FIELD NAME="serverid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="testfile"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="progassessment"/>
+        <KEY NAME="progassessment" TYPE="foreign" FIELDS="progassessment" REFTABLE="progassessment" REFFIELDS="id" PREVIOUS="primary" NEXT="testfile"/>
+        <KEY NAME="testfile" TYPE="foreign" FIELDS="testfile" REFTABLE="progassessment_testfiles" REFFIELDS="id" PREVIOUS="progassessment"/>
+      </KEYS>
+    </TABLE>
+
+    <TABLE NAME="progassessment_submissions" COMMENT="Info about submitted programming assessments" PREVIOUS="progassessment_testcases" NEXT="progassessment_submissions_testcases">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" ENUM="false" NEXT="progassessment"/>
+        <FIELD NAME="progassessment" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="id" NEXT="userid"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="progassessment" NEXT="timecreated"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="userid" NEXT="file"/>
+        <FIELD NAME="file" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="timecreated" NEXT="grade"/>
+        <FIELD NAME="grade" TYPE="int" LENGTH="3" NOTNULL="true" UNSIGNED="false" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="file" NEXT="isgraded"/>
+        <FIELD NAME="isgraded" TYPE="int" LENGTH="2" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="grade"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="progassessment"/>
+        <KEY NAME="progassessment" TYPE="foreign" FIELDS="progassessment" REFTABLE="progassessment" REFFIELDS="id" PREVIOUS="primary" NEXT="userid"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" PREVIOUS="progassessment" NEXT="file"/>
+        <KEY NAME="file" TYPE="foreign" FIELDS="file" REFTABLE="files" REFFIELDS="id" PREVIOUS="userid"/>
+      </KEYS>
+    </TABLE>
+
+    <TABLE NAME="progassessment_submissions_testcases" COMMENT="Results of the programming assessment submissions in the different test cases" PREVIOUS="progassessment_submissions" NEXT="progassessment_compilation_results">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" ENUM="false" NEXT="submission"/>
+        <FIELD NAME="submission" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="id" NEXT="testcase"/>
+        <FIELD NAME="testcase" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="submission" NEXT="result"/>
+        <FIELD NAME="result" TYPE="char" LENGTH="255" NOTNULL="false" DEFAULT="NULL" SEQUENCE="false" ENUM="false" PREVIOUS="testcase" NEXT="output_compile"/>
+        <FIELD NAME="output_compile" TYPE="text" LENGTH="medium" NOTNULL="false" SEQUENCE="false" ENUM="false" PREVIOUS="result" NEXT="output_run"/>
+        <FIELD NAME="output_run" TYPE="text" LENGTH="medium" NOTNULL="false" SEQUENCE="false" ENUM="false" PREVIOUS="output_compile" NEXT="output_diff"/>
+        <FIELD NAME="output_diff" TYPE="text" LENGTH="medium" NOTNULL="false" SEQUENCE="false" ENUM="false" PREVIOUS="output_run" NEXT="output_error"/>
+        <FIELD NAME="output_error" TYPE="text" LENGTH="medium" NOTNULL="false" SEQUENCE="false" ENUM="false" PREVIOUS="output_diff" NEXT="serverid"/>
+        <FIELD NAME="serverid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="output_error"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="submission"/>
+        <KEY NAME="submission" TYPE="foreign" FIELDS="submission" REFTABLE="progassessment_submissions" REFFIELDS="id" PREVIOUS="primary" NEXT="testcase"/>
+        <KEY NAME="testcase" TYPE="foreign" FIELDS="testcase" REFTABLE="progassessment_testcases" REFFIELDS="id" PREVIOUS="submission"/>
+      </KEYS>
+    </TABLE>
+
+    <TABLE NAME="progassessment_compilation_results" COMMENT="Results of compilations made in the compilation playground" PREVIOUS="progassessment_submissions_testcases">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" SEQUENCE="true" ENUM="false" NEXT="progassessment"/>
+        <FIELD NAME="progassessment" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="id" NEXT="userid"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="progassessment" NEXT="timecreated"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" PREVIOUS="userid" NEXT="file"/>
+        <FIELD NAME="file" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="timecreated" NEXT="result"/>
+        <FIELD NAME="result" TYPE="char" LENGTH="255" NOTNULL="false" DEFAULT="NULL" SEQUENCE="false" ENUM="false" PREVIOUS="file" NEXT="output_compile"/>
+        <FIELD NAME="output_compile" TYPE="text" LENGTH="medium" NOTNULL="false" SEQUENCE="false" ENUM="false" PREVIOUS="result" NEXT="serverid"/>
+        <FIELD NAME="serverid" TYPE="int" LENGTH="10" NOTNULL="true" UNSIGNED="true" DEFAULT="0" SEQUENCE="false" ENUM="false" PREVIOUS="output_compile"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id" NEXT="progassessment"/>
+        <KEY NAME="progassessment" TYPE="foreign" FIELDS="progassessment" REFTABLE="progassessment" REFFIELDS="id" PREVIOUS="primary" NEXT="userid"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" PREVIOUS="progassessment" NEXT="file"/>
+        <KEY NAME="file" TYPE="foreign" FIELDS="file" REFTABLE="files" REFFIELDS="id" PREVIOUS="userid"/>
+      </KEYS>
+    </TABLE>
+
+  </TABLES>
+  
+  <STATEMENTS>
+    <STATEMENT NAME="insert log_display" TYPE="insert" TABLE="log_display" COMMENT="Initial insert of records on table log_display. Each record describes how data will be showed by log reports.">
+      <SENTENCES>
+        <SENTENCE TEXT="(module, action, mtable, field) VALUES ('progassessment', 'add', 'progassessment', 'name')" />
+        <SENTENCE TEXT="(module, action, mtable, field) VALUES ('progassessment', 'update', 'progassessment', 'name')" />
+        <SENTENCE TEXT="(module, action, mtable, field) VALUES ('progassessment', 'view', 'progassessment', 'name')" />
+      </SENTENCES>
+    </STATEMENT>
+  </STATEMENTS>
+</XMLDB>

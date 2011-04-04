@@ -1,0 +1,31 @@
+/** General Styles **/
+.path-mod-progassessment .userpicture,
+.path-mod-progassessment .picture.user,
+.path-mod-progassessment .picture.teacher {width:35px;height: 35px;vertical-align:top;}
+.path-mod-progassessment .feedback .files,
+.path-mod-progassessment .feedback .grade,
+.path-mod-progassessment .feedback .outcome,
+.path-mod-progassessment .feedback .finalgrade {float: right;}
+.path-mod-progassessment .feedback .disabledfeedback {width: 500px;height: 250px;}
+.path-mod-progassessment .feedback .from {float: left;}
+.path-mod-progassessment .files img {margin-right: 4px;}
+.path-mod-progassessment .files a {white-space:nowrap;}
+
+/** Styles for submissions.php **/
+#page-mod-progassessment-submissions form#options div {text-align:right;margin-left:auto;margin-right:20px;}
+#page-mod-progassessment-submissions .header .commands {display: inline;}
+#page-mod-progassessment-submissions .picture {width: 35px;}
+#page-mod-progassessment-submissions .fullname,
+#page-mod-progassessment-submissions .timemodified,
+#page-mod-progassessment-submissions .timemarked {text-align: left;}
+#page-mod-progassessment-submissions .submissions .grade,
+#page-mod-progassessment-submissions .submissions .outcome,
+#page-mod-progassessment-submissions .submissions .finalgrade {text-align: right;}
+#page-mod-progassessment-submissions .qgprefs #optiontable {text-align:right;margin-left:auto;}
+
+/** Styles for view.php **/
+#page-mod-progassessment-view .feedback {margin:10px auto;}
+#page-mod-progassessment-view .feedback .grade {text-align: right;}
+#page-mod-progassessment-view #online .singlebutton {text-align: center;}
+#page-mod-progassessment-view #dates .c0 {text-align:right;font-weight:bold;}
+#page-mod-progassessment-view #feedback .c0 {text-align:right;font-weight:bold;}
