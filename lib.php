@@ -191,6 +191,12 @@ function progassessment_cron () {
 
     //get all non processed entries from table progassessment_submissions_testcases
     $non_processed_submissions_testcases = $DB->get_records('progassessment_submissions_testcases', array('result' => NULL));
+    
+    //get all non processed entries which got conflicted because they were still being evaluated
+    $non_processed_submissions_testcases_conflicted = $DB->get_records('progassessment_submissions_testcases', array('result' => ''));
+
+    //merge all entries
+    $non_processed_submissions_testcases += $non_processed_submissions_testcases_conflicted;
 
     $client = progassessment_get_client();
     $processed = array();
