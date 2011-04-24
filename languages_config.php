@@ -3,8 +3,10 @@
 $progassessment_languages_comments = array(
     "cpp" => "//",
     "c" => "//",
+    "cs" => "//",
     "java" => "//",
-    "scheme" => ";"
+    "scheme" => ";",
+    "sql" => "--"
 );
 
 
