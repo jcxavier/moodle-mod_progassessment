@@ -525,6 +525,7 @@ function progassessment_can_submit($progassessment, $context, $userid=0) {
 
 
 function progassessment_get_client() {
+    ini_set("soap.wsdl_cache_enabled", "0"); // disabling WSDL cache
     return new SoapClient(PROGASSESSMENT_SERVER_DEFINITION, array('features' => SOAP_SINGLE_ELEMENT_ARRAYS));
 }
 
@@ -713,7 +714,12 @@ function progassessment_add_instance_to_server($progassessment) {
     $timeLimit = 5;
 
     $client = progassessment_get_client();
-    $serverid = $client->addNewAssessment($id, $name, $timeLimit);
+    
+    // Oracle support
+    if ($progassessment->proglanguages === "SQL")
+        $serverid = $client->addNewAssessmentSpecial($id, $name, $timeLimit, "oracle.sh");
+    else
+        $serverid = $client->addNewAssessment($id, $name, $timeLimit);
 
     if ($serverid >= 0) {
         $progassessment->serverid = $serverid;
@@ -1063,7 +1069,11 @@ function progassessment_update_instance_in_server($serverid, $progassessment) {
     $testcases = $DB->get_records('progassessment_testcases', array('progassessment' => $progassessment->id));
     $ntestcases = sizeof($testcases);
 
-    $client->updateAssessment($serverid, $name, $timeLimit, $ntestcases);
+    // Oracle support
+    if ($progassessment->proglanguages === "SQL")
+        $client->updateAssessmentSpecial($serverid, $name, $timeLimit, $ntestcases, "oracle.sh");
+    else
+        $client->updateAssessment($serverid, $name, $timeLimit, $ntestcases);
 }
 
 function progassessment_update_test_cases($progassessment, $mform) {
