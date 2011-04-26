@@ -4,6 +4,7 @@
  * This page prints a particular instance of progassessment
  *
  * @author  Pedro Pacheco <pedro.a.x.pacheco@gmail.com>
+ * @author  João Xavier <ei06116@gmail.com>
  * @version $Id: view.php,v 1.6.2.3 2009/04/17 22:06:25 skodak Exp $
  * @package mod/progassessment
  */
@@ -444,36 +445,66 @@ function view_feedback($progassessment, $context, $submission_id) {
                 echo '<tr><td><b>' . get_string('feedback', 'progassessment') . ": </b></td><td>" . $testcase->wrong_feedback . '</td></tr>';
             }
 
-            //link for the input file only if the feedback is at least moderated
-            if ($progassessment->feedbackdetail) {
-                $filelink = view_test_case_input_file_link($testcase, $context);
-                echo '<tr><td><b>' . get_string('input', 'progassessment') . ': </b></td><td>' . $filelink . '</td></tr>';
-            }
 
-            //show the expected and obtained outputs only if the feedback is detailed
-            if ($progassessment->feedbackdetail == 2) {
-                //expected output
-                $expectedoutputlink = view_test_case_output_file_link($testcase, $context);
-                echo '<tr><td><b>' . get_string('expectedoutput', 'progassessment') . ': </b></td><td>' . $expectedoutputlink . '</td></tr>';
-
-                //obtained output
-                $file_record = new object();
-                $file_record->contextid = $context->id;
-                $file_record->component = 'mod_progassessment';
-                $file_record->filearea  = "progassessment_obtainedoutput";
-                $file_record->itemid    = $s_t->id;
-                $file_record->filepath  = '/';
-                $file_record->filename  = 'obtained_output.txt';
-                $file_record->userid    = $USER->id;
-
-                if (!$fs->file_exists($context->id, $file_record->component, $file_record->filearea, $file_record->itemid, $file_record->filepath, $file_record->filename)) {
-                    $obtainedoutputfile = $fs->create_file_from_string($file_record, str_replace("\n", "\r\n", $s_t->output_run));
-                } else {
-                    $obtainedoutputfile = $fs->get_file($context->id, $file_record->component, $file_record->filearea, $file_record->itemid, $file_record->filepath, $file_record->filename);
-                }
+            /* handle SQL feedback (moderated and detailed) */
+            if ($progassessment->proglanguages === "SQL") {
                 
-                $obtainedoutputlink = build_file_link($context, $obtainedoutputfile, $file_record->filearea, $s_t->id);
-                echo '<tr><td><b>' . get_string('obtainedoutput', 'progassessment') . ': </b></td><td>' . $obtainedoutputlink . '</td></tr>';
+                // feedback is the same both for moderated and detailed
+                if ($progassessment->feedbackdetail) {
+                    
+                    //obtained output
+                    $file_record = new object();
+                    $file_record->contextid = $context->id;
+                    $file_record->component = 'mod_progassessment';
+                    $file_record->filearea  = "progassessment_obtainedoutput";
+                    $file_record->itemid    = $s_t->id;
+                    $file_record->filepath  = '/';
+                    $file_record->filename  = 'obtained_output.txt';
+                    $file_record->userid    = $USER->id;
+                    
+                    if (!$fs->file_exists($context->id, $file_record->component, $file_record->filearea, $file_record->itemid, $file_record->filepath, $file_record->filename)) {
+                        $obtainedoutputfile = $fs->create_file_from_string($file_record, str_replace("\n", "\r\n", $s_t->output_error));
+                    } else {
+                        $obtainedoutputfile = $fs->get_file($context->id, $file_record->component, $file_record->filearea, $file_record->itemid, $file_record->filepath, $file_record->filename);
+                    }
+                
+                    $obtainedoutputlink = build_file_link($context, $obtainedoutputfile, $file_record->filearea, $s_t->id);
+                    echo '<tr><td><b>' . get_string('obtainedoutput', 'progassessment') . ': </b></td><td>' . $obtainedoutputlink . '</td></tr>';
+                }
+            }
+            /* handle regular feedback */
+            else {
+                //link for the input file only if the feedback is at least moderated
+                if ($progassessment->feedbackdetail) {
+                    $filelink = view_test_case_input_file_link($testcase, $context);
+                    echo '<tr><td><b>' . get_string('input', 'progassessment') . ': </b></td><td>' . $filelink . '</td></tr>';
+                }
+
+                //show the expected and obtained outputs only if the feedback is detailed
+                if ($progassessment->feedbackdetail == 2) {
+                    //expected output
+                    $expectedoutputlink = view_test_case_output_file_link($testcase, $context);
+                    echo '<tr><td><b>' . get_string('expectedoutput', 'progassessment') . ': </b></td><td>' . $expectedoutputlink . '</td></tr>';
+
+                    //obtained output
+                    $file_record = new object();
+                    $file_record->contextid = $context->id;
+                    $file_record->component = 'mod_progassessment';
+                    $file_record->filearea  = "progassessment_obtainedoutput";
+                    $file_record->itemid    = $s_t->id;
+                    $file_record->filepath  = '/';
+                    $file_record->filename  = 'obtained_output.txt';
+                    $file_record->userid    = $USER->id;
+
+                    if (!$fs->file_exists($context->id, $file_record->component, $file_record->filearea, $file_record->itemid, $file_record->filepath, $file_record->filename)) {
+                        $obtainedoutputfile = $fs->create_file_from_string($file_record, str_replace("\n", "\r\n", $s_t->output_run));
+                    } else {
+                        $obtainedoutputfile = $fs->get_file($context->id, $file_record->component, $file_record->filearea, $file_record->itemid, $file_record->filepath, $file_record->filename);
+                    }
+                
+                    $obtainedoutputlink = build_file_link($context, $obtainedoutputfile, $file_record->filearea, $s_t->id);
+                    echo '<tr><td><b>' . get_string('obtainedoutput', 'progassessment') . ': </b></td><td>' . $obtainedoutputlink . '</td></tr>';
+                }
             }
 
             echo '</table>';

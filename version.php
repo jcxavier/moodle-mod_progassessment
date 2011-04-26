@@ -10,6 +10,6 @@
  */
 
 $module->version  = 2010033000;  // The current module version (Date: YYYYMMDDXX)
-$module->cron     = 10;           // Period for cron to check this module (secs)
+$module->cron     = 1;           // Period for cron to check this module (secs)
 
 ?>
