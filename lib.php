@@ -283,14 +283,37 @@ function progassessment_cron () {
             else
                 $answ = $answ->anyType;
             
-            $result = $answ[0];
-            $output_compile = $answ[1];
+            
+            // if condition met, it is an Oracle query which did not compile
+            if (beginsWith($answ[3], "ORA-") && beginsWith($answ[4], "Unknown result"))
+            {
+                $result = "compiler-error";
+                $output_compile = $answ[3];
+            }
+            else
+            {
+                $result = $answ[0];
+                $output_compile = $answ[1];
+            }
+            
             $DB->set_field('progassessment_compilation_results', 'result', $result, array("id" => $k));
             $DB->set_field('progassessment_compilation_results', 'output_compile', $output_compile, array("id" => $k));
         }
     }
 
     return true;
+}
+
+
+/**
+ * Tests if a string begins with a given substring.
+ *
+ * @param string $str the string to search
+ * @param string $sub the given substring
+ * @return boolean result
+ */
+function beginsWith($str, $sub) {
+    return (strncmp($str, $sub, strlen($sub)) == 0);
 }
 
 
@@ -1321,7 +1344,18 @@ function progassessment_add_submission_to_server($progassessment, $client, $lang
     }
 
     if ($compilation) {
-        return $client->addCompileSubmission($USER->username, $progassessment->serverid, $language, $content);
+        
+        // Special case for SQL
+        if ($progassessment->proglanguages === "SQL") {
+            
+            $testcases = $DB->get_records('progassessment_testcases', array('progassessment' => $progassessment->id));
+            $testcases_ids = array_keys($testcases);
+            
+            return $client->addCompileSubmissionSpecial($USER->username, $progassessment->serverid, $testcases_ids, $language, $content);
+        }
+        else
+            return $client->addCompileSubmission($USER->username, $progassessment->serverid, $language, $content);
+        
     } else {
         $testcases = $DB->get_records('progassessment_testcases', array('progassessment' => $progassessment->id));
         $testcases_ids = array_keys($testcases);
