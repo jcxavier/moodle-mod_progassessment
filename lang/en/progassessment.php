@@ -111,4 +111,8 @@ $string['lastcompiledfile'] = 'Last compiled file';
 $string['compilationresult'] = 'Compilation result';
 $string['compilationwassuccessful'] = 'Compilation was successful';
 
+$string['downloadall'] = 'Download all submissions as a zip';
+$string['errornosubmissions'] = 'There are no submissions to download';
+$string['viewsubmissions'] = 'View {$a} submitted assessments';
+$string['noattempts'] = 'No attempts have been made on this assessment';
 ?>

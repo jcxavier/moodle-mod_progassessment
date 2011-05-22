@@ -227,7 +227,7 @@ function progassessment_cron () {
         $output_run = $answ[2];
         $output_diff = $answ[3];
         $output_error = $answ[4];
-        
+                
         //update the result and output fields in the progassessment_submissions_testcases table
         $DB->set_field('progassessment_submissions_testcases', "result", $result, array("submission" => $p->submission, "testcase" => $p->testcase));
         $DB->set_field('progassessment_submissions_testcases', "output_compile", $output_compile, array("submission" => $p->submission, "testcase" => $p->testcase));
@@ -304,6 +304,204 @@ function progassessment_cron () {
     return true;
 }
 
+
+/**
+ * Returns a link with info about the state of the assignment submissions
+ *
+ * This is used by view_header to put this link at the top right of the page.
+ * For teachers it gives the number of submitted assignments with a link
+ * For students it gives the time of their submission.
+ * This will be suitable for most assignment types.
+ *
+ * @global object
+ * @global object
+ * @param bool $allgroup print all groups info if user can access all groups, suitable for index.php
+ * @return string
+ */
+function submittedlink($cm, $allgroups=false) {
+    global $USER, $CFG, $COURSE;
+
+    $submitted = '';
+    $urlbase = "{$CFG->wwwroot}/mod/progassessment/";
+
+    $context = get_context_instance(CONTEXT_MODULE, $cm->id);
+    if (has_capability('mod/progassessment:grade', $context)) {
+        if ($allgroups and has_capability('moodle/site:accessallgroups', $context)) {
+            $group = 0;
+        } else {
+            $group = groups_get_activity_group($cm);
+        }
+        if ($count = count_real_submissions($cm, $group)) {
+            $submitted = '<a href="'.$urlbase.'submissions.php?id='.$cm->id.'">'.
+                         get_string('viewsubmissions', 'progassessment', $count).'</a>';
+        } else {
+            $submitted = '<a href="'.$urlbase.'submissions.php?id='.$cm->id.'">'.
+                         get_string('noattempts', 'progassessment').'</a>';
+        }
+    }
+
+    return $submitted;
+}
+
+/**
+ * Counts all real assignment submissions by ENROLLED students (not empty ones)
+ *
+ * @param $groupid int optional If nonzero then count is restricted to this group
+ * @return int The number of submissions
+ */
+function count_real_submissions($cm, $groupid=0) {
+    global $CFG, $DB;
+
+    $context = get_context_instance(CONTEXT_MODULE, $cm->id);
+
+    // this is all the users with this capability set, in this context or higher
+    if ($users = get_enrolled_users($context, 'mod/progassessment:view', $groupid, 'u.id')) {
+        $users = array_keys($users);
+    }
+
+    // if groupmembersonly used, remove users who are not in any group
+    if ($users and !empty($CFG->enablegroupmembersonly) and $cm->groupmembersonly) {
+        if ($groupingusers = groups_get_grouping_members($cm->groupingid, 'u.id', 'u.id')) {
+            $users = array_intersect($users, array_keys($groupingusers));
+        }
+    }
+
+    if (empty($users)) {
+        return 0;
+    }
+
+    $userlists = implode(',', $users);
+
+    $count = $DB->count_records_sql("SELECT COUNT(*) FROM (SELECT userid, COUNT(*)
+                                       FROM {progassessment_submissions}
+                                      WHERE progassessment = ? AND
+                                            timecreated > 0 AND
+                                            userid IN ($userlists)
+                                   GROUP BY userid) AS TEMPTABLE", array($cm->instance));
+
+    return $count;
+}
+
+/**
+ * Return all progassessment submissions by ENROLLED students (even empty)
+ *
+ * @param $sort string optional field names for the ORDER BY in the sql query
+ * @param $dir string optional specifying the sort direction, defaults to DESC
+ * @return array The submission objects indexed by id
+ */
+function progassessment_get_all_submissions($progassessment, $sort="", $dir="DESC") {
+/// Return all progassessment submissions by ENROLLED students (even empty)
+    global $CFG, $DB;
+
+    if ($sort == "lastname" or $sort == "firstname") {
+        $sort = "u.$sort $dir";
+    } else if (empty($sort)) {
+        $sort = "a.timecreated DESC";
+    } else {
+        $sort = "a.$sort $dir";
+    }
+
+    /* not sure this is needed at all since assignment already has a course define, so this join?
+    $select = "s.course = '$assignment->course' AND";
+    if ($assignment->course == SITEID) {
+        $select = '';
+    }*/
+
+    $result = $DB->get_records_sql("SELECT a.*, f.itemid
+                                   FROM {user} u, {progassessment_submissions} a
+                             INNER JOIN {files} f ON a.file = f.id
+                                  WHERE u.id = a.userid
+                                    AND a.progassessment = ?
+                               ORDER BY $sort", array($progassessment->id));
+   
+    return $result;
+}
+
+/**
+ * creates a zip of all assignment submissions and sends a zip to the browser
+ */
+function progassessment_download_submissions($progassessment, $cm) {
+    global $CFG, $DB, $COURSE;
+    require_once($CFG->libdir.'/filelib.php');
+    
+    $submissions = progassessment_get_all_submissions($progassessment);
+    $context = get_context_instance(CONTEXT_MODULE, $cm->id);
+    
+    if (empty($submissions)) {
+        print_error('errornosubmissions', 'progassessment');
+    }
+    $filesforzipping = array();
+    $fs = get_file_storage();
+
+    $groupmode = groups_get_activity_groupmode($cm);
+    $groupid = 0;   // All users
+    $groupname = '';
+    if ($groupmode) {
+        $groupid = groups_get_activity_group($cm, true);
+        $groupname = groups_get_group_name($groupid).'-';
+    }
+    $filename = str_replace(' ', '_', clean_filename($COURSE->shortname.'-'.$progassessment->name.'-'.$groupname.$progassessment->id.".zip")); //name of new zip file.
+    
+    foreach ($submissions as $submission) {
+        $a_userid = $submission->userid; //get userid
+        if ((groups_is_member($groupid, $a_userid) or !$groupmode or !$groupid)) {
+            $a_assignid = $submission->progassessment; //get name of this assignment for use in the file names.
+            $a_user = $DB->get_record("user", array("id"=>$a_userid),'id,username,firstname,lastname'); //get user firstname/lastname
+
+            $files = $fs->get_area_files($context->id, 'mod_progassessment', 'progassessment_submission', $submission->itemid, "timemodified", false);
+            
+            foreach ($files as $file) {
+                //get files new name.
+                $fileext = strstr($file->get_filename(), '.');
+                $fileoriginal = str_replace($fileext, '', $file->get_filename());
+                $fileforzipname =  clean_filename(fullname($a_user) . "_" . $fileoriginal."_".$a_userid.$fileext);
+                //save file name to array for zipping.
+                $filesforzipping[$fileforzipname] = $file;
+            }
+        }
+    } // end of foreach loop
+    
+    // zip
+    $tempzip = tempnam($CFG->dataroot.'/temp/', 'progassessment');
+    $zipper = new zip_packer();
+    if ($zipper->archive_to_pathname($filesforzipping, $tempzip)) {
+        send_temp_file($tempzip, $filename); //send file and delete after sending.
+    }
+}
+
+
+/**
+ * TODO
+ */
+function progassessment_display_submissions($progassessment, $cm, $mode) {
+    global $CFG, $PAGE, $OUTPUT, $DB, $COURSE;
+
+    $course = $DB->get_record('course', array('id' => $progassessment->course));
+    $strprogassessment  = get_string('modulename', 'progassessment');
+    $pagetitle = strip_tags($course->shortname.': '.$strprogassessment.': '.format_string($progassessment->name,true));
+
+    $PAGE->set_title($pagetitle);
+    $PAGE->set_heading($course->fullname);
+
+    echo $OUTPUT->header();
+    groups_print_activity_menu($cm, $CFG->wwwroot . '/mod/progassessment/view.php?id=' . $cm->id);
+
+    echo '<div class="clearer"></div>';
+    echo '<div style="text-align:right"><a href="submissions.php?id='.$cm->id.'&amp;download=zip">'.get_string('downloadall', 'progassessment').'</a></div>';
+
+
+
+    echo '<div class="usersubmissions">';
+    //hook to allow plagiarism plugins to update status/print links.
+    plagiarism_update_status($COURSE, $cm);
+    
+    // middle TODO
+    echo '</div>';
+    
+    
+    
+    echo $OUTPUT->footer();
+}
 
 /**
  * Tests if a string begins with a given substring.
@@ -1393,7 +1591,7 @@ function progassessment_add_submission_to_server($progassessment, $client, $lang
 }
 
 function progassessment_upload_submission_file($progassessment, $cm, $course) {
-    global $CFG, $USER, $DB, $OUTPUT;
+    global $CFG, $USER, $COURSE, $DB, $OUTPUT;
 
     $returnurl = 'view.php?id='.$cm->id;
     $context = get_context_instance(CONTEXT_MODULE, $cm->id);
@@ -1433,6 +1631,28 @@ function progassessment_upload_submission_file($progassessment, $cm, $course) {
                 $submissionid = $DB->insert_record('progassessment_submissions', $submission);
 
                 if ($submissionid) {
+                    
+                    // Let Moodle know that assessable files were uploaded (eg for plagiarism detection)
+                    $eventdata = new stdClass();
+                    $eventdata->modulename   = 'progassessment';
+                    $eventdata->cmid         = $cm->id;
+                    $eventdata->itemid       = $file->get_itemid();
+                    $eventdata->courseid     = $COURSE->id;
+                    $eventdata->userid       = $USER->id;
+                    $eventdata->file         = $file;
+                    
+                    events_trigger('assessable_file_uploaded', $eventdata);
+                    
+                    // Trigger assessable_files_done event to show files are complete
+                    $eventdata = new stdClass();
+                    $eventdata->modulename   = 'progassessment';
+                    $eventdata->cmid         = $cm->id;
+                    $eventdata->itemid       = $file->get_itemid();
+                    $eventdata->courseid     = $COURSE->id;
+                    $eventdata->userid       = $USER->id;
+                    events_trigger('assessable_files_done', $eventdata);
+                    
+                    
                     progassessment_add_submission_to_server($progassessment, $client, $language, $file, $submissionid);
                     redirect($returnurl);
                 } else {
@@ -1565,9 +1785,9 @@ function progassessment_view_header($progassessment, $cm, $subpage="") {
     }
 
     echo $OUTPUT->header();
-
     groups_print_activity_menu($cm, $CFG->wwwroot . '/mod/progassessment/view.php?id=' . $cm->id);
 
+    echo '<div class="reportlink">'.submittedlink($cm).'</div>';
     echo '<div class="clearer"></div>';
 }
 

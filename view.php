@@ -12,6 +12,7 @@
 
 require_once(dirname(dirname(dirname(__FILE__))).'/config.php');
 require_once(dirname(__FILE__).'/lib.php');
+require_once($CFG->libdir . '/plagiarismlib.php');
 require_once($CFG->dirroot.'/mod/progassessment/languages_config.php');
 
 $id = optional_param('id', 0, PARAM_INT); // course_module ID, or
@@ -73,11 +74,13 @@ view_description($progassessment, $cm, $context);
 
 view_input_and_output_data($progassessment, $context);
 
-view_feedback($progassessment, $context, $submission_id);
-
 view_submission($progassessment, $context);
 
-view_compilation_playground($progassessment, $context);
+view_feedback($progassessment, $context, $submission_id);
+
+// doesn't make sense to provide a compilation playground for SQL statements
+if ($progassessment->proglanguages !== "SQL")
+    view_compilation_playground($progassessment, $context);
 
 progassessment_view_footer();
 
@@ -141,7 +144,7 @@ function view_dates($progassessment) {
 function view_initial_info($progassessment, $context) {
     global $OUTPUT;
 
-    echo $OUTPUT->heading(get_string('progassessment', 'progassessment') . ": $progassessment->name", 2, 'main trigger expanded');
+    echo $OUTPUT->heading(get_string('progassessment', 'progassessment') . ": $progassessment->name", 2, 'main trigger');
 
     echo $OUTPUT->box_start('generalbox boxaligncenter', 'dates');
 
@@ -356,7 +359,7 @@ function view_feedback($progassessment, $context, $submission_id) {
     if ($submission && $submission->isgraded) {
         $submissions_testcases = $DB->get_records("progassessment_submissions_testcases", array('submission' => $submission->id), "testcase ASC");
 
-        echo $OUTPUT->heading(get_string('feedback', 'progassessment'), 2, 'main trigger');
+        echo $OUTPUT->heading(get_string('feedback', 'progassessment'), 2, 'main trigger expanded');
         echo $OUTPUT->box_start('generalbox boxaligncenter', 'dates');
 
         //form to chose which submission to show
@@ -531,7 +534,7 @@ function view_feedback($progassessment, $context, $submission_id) {
 function view_submission($progassessment, $context) {
     global $OUTPUT, $DB, $USER, $CFG;
 
-    echo $OUTPUT->heading(get_string('submission', 'progassessment'), 2, 'main trigger');
+    echo $OUTPUT->heading(get_string('submission', 'progassessment'), 2, 'main trigger expanded');
 
     $submission = progassessment_get_current_submission($progassessment);
 
@@ -560,10 +563,15 @@ function view_submission($progassessment, $context) {
 
     //display the submission form
     if (progassessment_can_submit($progassessment, $context)) {
+        GLOBAL $COURSE;
+        
         $testcases = $DB->get_records('progassessment_testcases', array('progassessment' => $progassessment->id));
 
         //submissions can only be accepted if the progassessment has test cases
         if (sizeof($testcases)) {
+            
+            plagiarism_print_disclosure($COURSE->id);
+            
             $mform = new mod_progassessment_submit_file_form("upload.php", $progassessment);
             $mform->display();
         }

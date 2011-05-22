@@ -211,6 +211,13 @@ class mod_progassessment_mod_form extends moodleform_mod {
         $num_testfiles = max(1, count($testfiles));
         $this->repeat_testcases($num_testfiles, $testfiles, $filepickeroptions);
         
+        
+//-------------------------------------------------------------------------------
+        // Plagiarism block
+        $course_context = get_context_instance(CONTEXT_COURSE, $COURSE->id);
+        plagiarism_get_form_elements_module($mform, $course_context);
+        
+        
 //-------------------------------------------------------------------------------
         // add standard elements, common to all modules
         $this->standard_coursemodule_elements();
