@@ -426,11 +426,13 @@ function progassessment_get_all_submissions($progassessment, $sort="", $dir="DES
         $sort = "a.$sort $dir";
     }
 
+	/*
     if ($progassessment->gradingmethod == PROGASSESSMENT_BEST_SUBMISSION)
         $select = "SELECT a.id AS id, a.progassessment, a.userid, a.timecreated, a.file, MAX(a.grade) AS grade, a.isgraded, f.itemid";
     else
         $select = "SELECT MAX(a.id) AS id, a.progassessment, a.userid, a.timecreated, a.file, a.grade AS grade, a.isgraded, f.itemid";
     
+	
     $results = $DB->get_records_sql($select." ".
                                            "FROM {user} u, {progassessment_submissions} a
                                             INNER JOIN {files} f ON a.file = f.id
@@ -439,24 +441,16 @@ function progassessment_get_all_submissions($progassessment, $sort="", $dir="DES
                                             GROUP BY a.userid
                                             ORDER BY $sort",
                                    array($progassessment->id));
-                                   
-    /* TODO
-    SELECT a.id, a.progassessment, a.grade, a.userid, a.timecreated, a.file, a.isgraded, f.itemid, f.filepath
-    FROM mdl_progassessment_submissions a
-    INNER JOIN mdl_files f ON a.file = f.id, (
-
-    SELECT b.id AS id, b.progassessment, b.userid, MAX( b.grade ) AS grade
-    FROM mdl_progassessment_submissions b
-    INNER JOIN mdl_files g ON b.file = g.id
-    WHERE b.progassessment =131
-    GROUP BY b.userid
-    )stub
-
-    WHERE a.grade = stub.grade
-    AND a.progassessment = stub.progassessment
-    AND a.userid = stub.userid
     */
-   
+								   
+	// all submissions
+	$results = $DB->get_records_sql("SELECT a.* , f.* 
+									 FROM mdl_progassessment_submissions a
+									 INNER JOIN mdl_files f ON a.file = f.id
+									 WHERE a.progassessment = ?
+									 ORDER BY $sort",
+									array($progassessment->id));
+         
     return $results;
 }
 
@@ -499,8 +493,11 @@ function progassessment_download_submissions($progassessment, $cm) {
                 //get files new name.
                 $fileext = strstr($file->get_filename(), '.');
                 $fileoriginal = str_replace($fileext, '', $file->get_filename());
-                $fileforzipname =  clean_filename(fullname($a_user) . "_" . $fileoriginal."_".$a_userid.$fileext);
-                //save file name to array for zipping.
+				// attach the submission number
+				$structure = split("/", $file->get_filepath(), 4);
+                $fileforzipname =  clean_filename(fullname($a_user) . "_" . $fileoriginal."_".$structure[2]."_".$a_userid.$fileext);
+				
+                // save file name to array for zipping.
                 $filesforzipping[$fileforzipname] = $file;
             }
         }
@@ -696,18 +693,25 @@ function progassessment_display_submissions($progassessment, $cm, $mode) {
 
     $ufields = user_picture::fields('u');
     
-    /** TODO CHANGE THIS QUERY **/
-    if ($progassessment->gradingmethod == PROGASSESSMENT_LAST_SUBMISSION) {
-        $select = "SELECT $ufields, MAX(s.id) AS submissionid, s.grade AS grade, s.timecreated, s.isgraded ";
-    } else {
-        $select = "SELECT $ufields, s.id AS submissionid, MAX(s.grade) AS grade, s.timecreated, s.isgraded ";
-    }
-    
-    $sql = 'FROM {user} u '.
-           'LEFT JOIN {progassessment_submissions} s ON u.id = s.userid
-            AND s.progassessment = '.$progassessment->id.' '.
-           'WHERE '.$where.'u.id IN ('.implode(',',$users).') '.
-           'GROUP BY u.id';
+	if ($progassessment->gradingmethod == PROGASSESSMENT_LAST_SUBMISSION) {
+		$subquery = "(SELECT MAX(id) AS submissionid FROM mdl_progassessment_submissions WHERE progassessment=$progassessment->id GROUP BY userid)";
+	
+		$select = "SELECT $ufields, s.id AS submissionid, s.grade AS grade, s.timecreated, s.isgraded ";
+		
+		$sql = 'FROM {user} u '.
+			   'LEFT JOIN {progassessment_submissions} s ON u.id = s.userid
+				AND s.progassessment = '.$progassessment->id.' '.
+			   'WHERE '.$where.'u.id IN ('.implode(',',$users).') AND s.id IN '.$subquery.
+			   'GROUP BY u.id';
+	} else {
+		$select = "SELECT $ufields, s.id AS submissionid, MAX(s.grade) AS grade, s.timecreated, s.isgraded ";
+	
+		$sql = 'FROM {user} u '.
+			   'LEFT JOIN {progassessment_submissions} s ON u.id = s.userid
+				AND s.progassessment = '.$progassessment->id.' '.
+			   'WHERE '.$where.'u.id IN ('.implode(',',$users).') '.
+			   'GROUP BY u.id';
+	}
    
     $ausers = $DB->get_records_sql($select.$sql.$sort, $params, $table->get_page_start(), $table->get_page_size());
     $table->pagesize($perpage, count($users));

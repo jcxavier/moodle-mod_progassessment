@@ -94,11 +94,9 @@ class progassessment_files implements renderable {
         $this->dir = $fs->get_area_tree($this->context->id, 'mod_progassessment', $filearea, $itemid);
         $files = $fs->get_area_files($this->context->id, 'mod_progassessment', $filearea, $itemid, "timemodified", false);
 
-        var_dump($filepath);
-
         $structure = split("/", $filepath, 4);
         $this->dir = $this->dir['subdirs'][$structure[1]]; // progassessment folder
-        $this->dir = $this->dir['subdirs'][$structure[2]]; // submission folder
+        //$this->dir = $this->dir['subdirs'][$structure[2]]; // submission folder
 
         if (count($files) >= 1 && has_capability('mod/progassessment:exportownsubmission', $this->context)) {
             $button = new portfolio_add_button();
