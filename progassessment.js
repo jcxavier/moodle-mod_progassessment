@@ -1,25 +1,25 @@
-var assignment = {};
+var progassessment = {};
 
 function setNext(){
     document.getElementById('submitform').mode.value = 'next';
-    document.getElementById('submitform').userid.value = assignment.nextid;
+    document.getElementById('submitform').userid.value = progassessment.nextid;
 }
 
 function saveNext(){
     document.getElementById('submitform').mode.value = 'saveandnext';
-    document.getElementById('submitform').userid.value = assignment.nextid;
-    document.getElementById('submitform').saveuserid.value = assignment.userid;
+    document.getElementById('submitform').userid.value = progassessment.nextid;
+    document.getElementById('submitform').saveuserid.value = progassessment.userid;
     document.getElementById('submitform').menuindex.value = document.getElementById('submitform').grade.selectedIndex;
 }
 
 function initNext(nextid, usserid) {
-	assignment.nextid = nextid;
-	assignment.userid = userid;
+	progassessment.nextid = nextid;
+	progassessment.userid = userid;
 }
 
-M.mod_assignment = {};
+M.mod_progassessment = {};
 
-M.mod_assignment.init_tree = function(Y, expand_all, htmlid) {
+M.mod_progassessment.init_tree = function(Y, expand_all, htmlid) {
     Y.use('yui2-treeview', function(Y) {
         var tree = new YAHOO.widget.TreeView(htmlid);
 

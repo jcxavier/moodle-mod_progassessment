@@ -385,6 +385,29 @@ function count_real_submissions($cm, $groupid=0) {
     return $count;
 }
 
+function progassessment_get_submission($progassessment, $userid) {
+    global $CFG, $DB;
+    
+    if ($progassessment->gradingmethod == PROGASSESSMENT_BEST_SUBMISSION)
+        $select = "SELECT b.id AS id, b.progassessment, b.userid, MAX(b.grade) AS grade";
+    else
+        $select = "SELECT MAX(b.id) AS id, b.progassessment, b.userid, b.grade AS grade";
+    
+    $subquery = $select." ".
+        "FROM {progassessment_submissions} b
+         INNER JOIN {files} g ON b.file = g.id
+         WHERE b.userid = $userid
+         AND b.progassessment = $progassessment->id
+         GROUP BY b.userid";
+    
+    $result = $DB->get_record_sql("SELECT a.id, a.progassessment, a.grade, a.userid, a.timecreated, a.file, a.isgraded, f.itemid, f.filepath ".
+                                  "FROM mdl_progassessment_submissions a INNER JOIN mdl_files f ON a.file = f.id, ".
+                                  "(".$subquery.") stub ".
+                                  "WHERE a.grade = stub.grade AND a.progassessment = stub.progassessment AND a.userid = stub.userid");
+                                   
+    return $result;
+}
+
 /**
  * Return all progassessment submissions by ENROLLED students (even empty)
  *
@@ -393,7 +416,6 @@ function count_real_submissions($cm, $groupid=0) {
  * @return array The submission objects indexed by id
  */
 function progassessment_get_all_submissions($progassessment, $sort="", $dir="DESC") {
-/// Return all progassessment submissions by ENROLLED students (even empty)
     global $CFG, $DB;
 
     if ($sort == "lastname" or $sort == "firstname") {
@@ -404,20 +426,38 @@ function progassessment_get_all_submissions($progassessment, $sort="", $dir="DES
         $sort = "a.$sort $dir";
     }
 
-    /* not sure this is needed at all since assignment already has a course define, so this join?
-    $select = "s.course = '$assignment->course' AND";
-    if ($assignment->course == SITEID) {
-        $select = '';
-    }*/
+    if ($progassessment->gradingmethod == PROGASSESSMENT_BEST_SUBMISSION)
+        $select = "SELECT a.id AS id, a.progassessment, a.userid, a.timecreated, a.file, MAX(a.grade) AS grade, a.isgraded, f.itemid";
+    else
+        $select = "SELECT MAX(a.id) AS id, a.progassessment, a.userid, a.timecreated, a.file, a.grade AS grade, a.isgraded, f.itemid";
+    
+    $results = $DB->get_records_sql($select." ".
+                                           "FROM {user} u, {progassessment_submissions} a
+                                            INNER JOIN {files} f ON a.file = f.id
+                                            WHERE u.id = a.userid
+                                            AND a.progassessment = ?
+                                            GROUP BY a.userid
+                                            ORDER BY $sort",
+                                   array($progassessment->id));
+                                   
+    /* TODO
+    SELECT a.id, a.progassessment, a.grade, a.userid, a.timecreated, a.file, a.isgraded, f.itemid, f.filepath
+    FROM mdl_progassessment_submissions a
+    INNER JOIN mdl_files f ON a.file = f.id, (
 
-    $result = $DB->get_records_sql("SELECT a.*, f.itemid
-                                   FROM {user} u, {progassessment_submissions} a
-                             INNER JOIN {files} f ON a.file = f.id
-                                  WHERE u.id = a.userid
-                                    AND a.progassessment = ?
-                               ORDER BY $sort", array($progassessment->id));
+    SELECT b.id AS id, b.progassessment, b.userid, MAX( b.grade ) AS grade
+    FROM mdl_progassessment_submissions b
+    INNER JOIN mdl_files g ON b.file = g.id
+    WHERE b.progassessment =131
+    GROUP BY b.userid
+    )stub
+
+    WHERE a.grade = stub.grade
+    AND a.progassessment = stub.progassessment
+    AND a.userid = stub.userid
+    */
    
-    return $result;
+    return $results;
 }
 
 /**
@@ -487,37 +527,19 @@ function progassessment_display_grade($progassessment, $isgraded, $grade) {
     return '-';
 }
 
-function progassessment_print_student_answer($progassessment, $userid, $return=false) {
+function progassessment_print_student_answer($progassessment, $cm, $userid, $return=false) {
     global $CFG, $OUTPUT, $PAGE;
 
-/*
-    $submission = $this->get_submission($userid);
-
+    $submission = progassessment_get_submission($progassessment, $userid);
+    $context = get_context_instance(CONTEXT_MODULE, $cm->id);
     $output = '';
 
-    if ($this->drafts_tracked() and $this->isopen() and !$this->is_finalized($submission)) {
-        $output .= '<strong>'.get_string('draft', 'assignment').':</strong> ';
-    }
-
-    if ($this->notes_allowed() and !empty($submission->data1)) {
-        $link = new moodle_url("/mod/assignment/type/upload/notes.php", array('id'=>$this->cm->id, 'userid'=>$userid));
-        $action = new popup_action('click', $link, 'notes', array('height' => 500, 'width' => 780));
-        $output .= $OUTPUT->action_link($link, get_string('notes', 'assignment'), $action, array('title'=>get_string('notes', 'assignment')));
-
-        $output .= '&nbsp;';
-    }
-
-
-    $renderer = $PAGE->get_renderer('mod_assignment');
+    $renderer = $PAGE->get_renderer('mod_progassessment');
     $output = $OUTPUT->box_start('files').$output;
-    $output .= $renderer->assignment_files($this->context, $submission->id);
+    $output .= $renderer->progassessment_files($context, $submission->filepath, $submission->itemid);
     $output .= $OUTPUT->box_end();
 
     return $output;
-    */
-    
-    // TODO
-    return "";
 }
 
 
@@ -674,7 +696,8 @@ function progassessment_display_submissions($progassessment, $cm, $mode) {
 
     $ufields = user_picture::fields('u');
     
-    if ($progassessment->gradingmethod == 1) {
+    /** TODO CHANGE THIS QUERY **/
+    if ($progassessment->gradingmethod == PROGASSESSMENT_LAST_SUBMISSION) {
         $select = "SELECT $ufields, MAX(s.id) AS submissionid, s.grade AS grade, s.timecreated, s.isgraded ";
     } else {
         $select = "SELECT $ufields, s.id AS submissionid, MAX(s.grade) AS grade, s.timecreated, s.isgraded ";
@@ -724,7 +747,7 @@ function progassessment_display_submissions($progassessment, $cm, $mode) {
                 ///attach file or print link to student answer, depending on the type of the assignment.
                 ///Refer to print_student_answer in inherited classes.
                     if ($auser->timecreated > 0) {
-                        $studentmodified = '<div id="ts'.$auser->id.'">'.progassessment_print_student_answer($progassessment, $auser->id)
+                        $studentmodified = '<div id="ts'.$auser->id.'">'.progassessment_print_student_answer($progassessment, $cm, $auser->id)
                                          . userdate($auser->timecreated).'</div>';
                     } else {
                         $studentmodified = '<div id="ts'.$auser->id.'">&nbsp;</div>';
