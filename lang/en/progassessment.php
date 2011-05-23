@@ -114,9 +114,11 @@ $string['compilationwassuccessful'] = 'Compilation was successful';
 $string['downloadall'] = 'Download all submissions as a zip';
 $string['errornosubmissions'] = 'There are no submissions to download';
 $string['isgraded'] = 'Graded';
+$string['no'] = 'No';
 $string['noattempts'] = 'No attempts have been made on this assessment';
 $string['nosubmitusers'] = 'No users were found with permissions to submit this assessment';
 $string['optionalsettings'] = 'Optional settings';
 $string['submitted'] = 'Submitted';
 $string['viewsubmissions'] = 'View {$a} submitted assessments';
+$string['yes'] = 'Yes';
 ?>

@@ -590,11 +590,11 @@ function progassessment_display_submissions($progassessment, $cm, $mode) {
            $wherefilter = ' AND s.timecreated > 0';
         }
         
-        $sql = "SELECT u.id FROM {user} u ".
+        $sql = "SELECT DISTINCT u.id FROM {user} u ".
                "LEFT JOIN ($esql) eu ON eu.id=u.id ".
                "LEFT JOIN {progassessment_submissions} s ON (u.id = s.userid) " .
                "WHERE u.deleted = 0 AND eu.id=u.id ".
-               'AND s.id = '. $progassessment->id .
+               'AND s.progassessment = '. $progassessment->id .
                 $wherefilter;
     }
     
@@ -643,6 +643,8 @@ function progassessment_display_submissions($progassessment, $cm, $mode) {
     $table->set_attribute('class', 'submissions');
     $table->set_attribute('width', '100%');
     //$table->set_attribute('align', 'center');
+    
+    $table->no_sorting('isgraded');
 
     // Start working -- this is necessary as soon as the niceties are over
     $table->setup();
@@ -672,29 +674,36 @@ function progassessment_display_submissions($progassessment, $cm, $mode) {
 
     $ufields = user_picture::fields('u');
     
-    $select = "SELECT @rownum := @rownum +1 AS rownum, $ufields, s.id AS submissionid, s.grade, s.timecreated, s.isgraded ";
-    $sql = 'FROM (SELECT @rownum :=0) r, {user} u '.
+    if ($progassessment->gradingmethod == 1) {
+        $select = "SELECT $ufields, MAX(s.id) AS submissionid, s.grade AS grade, s.timecreated, s.isgraded ";
+    } else {
+        $select = "SELECT $ufields, s.id AS submissionid, MAX(s.grade) AS grade, s.timecreated, s.isgraded ";
+    }
+    
+    $sql = 'FROM {user} u '.
            'LEFT JOIN {progassessment_submissions} s ON u.id = s.userid
             AND s.progassessment = '.$progassessment->id.' '.
-           'WHERE '.$where.'u.id IN ('.implode(',',$users).') ';
-    
+           'WHERE '.$where.'u.id IN ('.implode(',',$users).') '.
+           'GROUP BY u.id';
+   
     $ausers = $DB->get_records_sql($select.$sql.$sort, $params, $table->get_page_start(), $table->get_page_size());
     $table->pagesize($perpage, count($users));
     
     // offset used to calculate index of student in that particular query, needed for the pop up to know who's next
     $offset = $page * $perpage;
+    
     $grademenu = make_grades_menu($progassessment->maxgrade);
     
     // fill table
     if ($ausers !== false) {
-        $grading_info = grade_get_grades($course->id, 'mod', 'progassessment', $progassessment->id, $users);
+        $grading_info = grade_get_grades($course->id, 'mod', 'progassessment', $progassessment->id, array_keys($ausers));
         
         $endposition = $offset + $perpage;
         $currentposition = 0;
         
         foreach ($ausers as $auser) {
             
-            if ($currentposition == $offset && $offset < $endposition) {
+            if ($currentposition >= $offset && $currentposition < $endposition) {
                 
                 $final_grade = $grading_info->items[0]->grades[$auser->id];
                 $grademax = $grading_info->items[0]->grademax;
@@ -753,7 +762,7 @@ function progassessment_display_submissions($progassessment, $cm, $mode) {
                     $auser->isgraded = 1;
                 }
 
-                $isgradedtext = ($auser->isgraded == 1) ? "1" : "0"; // TODO
+                $isgradedtext = ($auser->isgraded == 1) ? get_string('yes', 'progassessment') : get_string('no', 'progassessment');
                 
                 $isgraded  = '<div id="up'.$auser->id.'" class="s'.$auser->isgraded.'">'.$isgradedtext.'</div>';
          
@@ -768,7 +777,6 @@ function progassessment_display_submissions($progassessment, $cm, $mode) {
     }
     
     $table->print_html();  /// Print the whole table
-    
     echo '</div>';
     
     
@@ -791,7 +799,7 @@ function progassessment_display_submissions($progassessment, $cm, $mode) {
 
     $mform->display();
     
-    
+    // display footer
     echo $OUTPUT->footer();
 }
 
