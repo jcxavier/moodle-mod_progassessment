@@ -17,6 +17,9 @@
 
 require_once($CFG->libdir.'/formslib.php');
 
+define('FILTER_ALL',        0);
+define('FILTER_SUBMITTED',  1);
+
 define('PROGASSESSMENT_SERVER_DEFINITION', "http://domserver.fe.up.pt/domjudge/frontend/frontend.wsdl");
 
 define('PROGASSESSMENT_IMMEDIATE_FEEDBACK', 1);
@@ -344,7 +347,7 @@ function submittedlink($cm, $allgroups=false) {
 }
 
 /**
- * Counts all real assignment submissions by ENROLLED students (not empty ones)
+ * Counts all real assessment submissions by ENROLLED students (not empty ones)
  *
  * @param $groupid int optional If nonzero then count is restricted to this group
  * @return int The number of submissions
@@ -418,7 +421,9 @@ function progassessment_get_all_submissions($progassessment, $sort="", $dir="DES
 }
 
 /**
- * creates a zip of all assignment submissions and sends a zip to the browser
+ * Creates a zip of all assignment submissions and sends a zip to the browser
+ * @param $progassessment a progassessment instance
+ * @param $cm course module
  */
 function progassessment_download_submissions($progassessment, $cm) {
     global $CFG, $DB, $COURSE;
@@ -470,13 +475,59 @@ function progassessment_download_submissions($progassessment, $cm) {
 }
 
 
-/**
- * TODO
- */
-function progassessment_display_submissions($progassessment, $cm, $mode) {
-    global $CFG, $PAGE, $OUTPUT, $DB, $COURSE;
+function progassessment_display_grade($progassessment, $isgraded, $grade) {
+    if ($isgraded) {
+        if ($grade == -1) {
+            return '-';
+        } else {
+            return $grade.' / '.$progassessment->maxgrade;
+        }
+    }
+    
+    return '-';
+}
 
+function progassessment_print_student_answer($progassessment, $userid, $return=false) {
+    global $CFG, $OUTPUT, $PAGE;
+
+/*
+    $submission = $this->get_submission($userid);
+
+    $output = '';
+
+    if ($this->drafts_tracked() and $this->isopen() and !$this->is_finalized($submission)) {
+        $output .= '<strong>'.get_string('draft', 'assignment').':</strong> ';
+    }
+
+    if ($this->notes_allowed() and !empty($submission->data1)) {
+        $link = new moodle_url("/mod/assignment/type/upload/notes.php", array('id'=>$this->cm->id, 'userid'=>$userid));
+        $action = new popup_action('click', $link, 'notes', array('height' => 500, 'width' => 780));
+        $output .= $OUTPUT->action_link($link, get_string('notes', 'assignment'), $action, array('title'=>get_string('notes', 'assignment')));
+
+        $output .= '&nbsp;';
+    }
+
+
+    $renderer = $PAGE->get_renderer('mod_assignment');
+    $output = $OUTPUT->box_start('files').$output;
+    $output .= $renderer->assignment_files($this->context, $submission->id);
+    $output .= $OUTPUT->box_end();
+
+    return $output;
+    */
+    
+    // TODO
+    return "";
+}
+
+
+function progassessment_display_submissions($progassessment, $cm, $mode) {
+    global $CFG, $PAGE, $OUTPUT, $DB;
+
+    // print header
     $course = $DB->get_record('course', array('id' => $progassessment->course));
+    $course_context = get_context_instance(CONTEXT_COURSE, $course->id);
+    $context = get_context_instance(CONTEXT_MODULE, $cm->id);
     $strprogassessment  = get_string('modulename', 'progassessment');
     $pagetitle = strip_tags($course->shortname.': '.$strprogassessment.': '.format_string($progassessment->name,true));
 
@@ -487,17 +538,258 @@ function progassessment_display_submissions($progassessment, $cm, $mode) {
     groups_print_activity_menu($cm, $CFG->wwwroot . '/mod/progassessment/view.php?id=' . $cm->id);
 
     echo '<div class="clearer"></div>';
-    echo '<div style="text-align:right"><a href="submissions.php?id='.$cm->id.'&amp;download=zip">'.get_string('downloadall', 'progassessment').'</a></div>';
-
-
-
-    echo '<div class="usersubmissions">';
-    //hook to allow plagiarism plugins to update status/print links.
-    plagiarism_update_status($COURSE, $cm);
     
-    // middle TODO
+    
+    require_once($CFG->libdir.'/gradelib.php');
+    /* first we check to see if the form has just been submitted
+     * to request user_preference updates
+     */
+    $filters = array(FILTER_ALL             => get_string('all'),
+                     FILTER_SUBMITTED       => get_string('submitted', 'progassessment'));
+
+    $updatepref = optional_param('updatepref', 0, PARAM_INT);
+
+    if (isset($_POST['updatepref'])){
+        $perpage = optional_param('perpage', 10, PARAM_INT);
+        $perpage = ($perpage <= 0) ? 10 : $perpage ;
+        $filter = optional_param('filter', 0, PARAM_INT);
+        set_user_preference('progassessment_perpage', $perpage);
+        set_user_preference('progassessment_filter', $filter);
+    }
+
+    // next we get perpage params from database
+    $perpage    = get_user_preferences('progassessment_perpage', 10);
+    $filter = get_user_preferences('progassessment_filter', 0);
+    $grading_info = grade_get_grades($course->id, 'mod', 'progassessment', $progassessment->id);
+
+    $page    = optional_param('page', 0, PARAM_INT);
+    
+    
+    echo '<div class="usersubmissions">';
+    plagiarism_update_status($course, $cm); //hook to allow plagiarism plugins to update status/print links.
+    
+    if (has_capability('gradereport/grader:view', $course_context) && has_capability('moodle/grade:viewall', $course_context)) {
+        echo '<div class="allcoursegrades"><a href="' . $CFG->wwwroot . '/grade/report/grader/index.php?id=' . $course->id . '">'
+            . get_string('seeallcoursegrades', 'grades') . '</a></div>';
+    }
+    
+    $groupmode = groups_get_activity_groupmode($cm);
+    $currentgroup = groups_get_activity_group($cm, true);
+    groups_print_activity_menu($cm, $CFG->wwwroot . '/mod/progassessment/submissions.php?id=' . $cm->id);
+
+    /// Get all ppl that are allowed to submit assignments
+    list($esql, $params) = get_enrolled_sql($context, 'mod/progassessment:view', $currentgroup);
+    
+    if ($filter == FILTER_ALL) {
+        $sql = "SELECT u.id FROM {user} u ".
+               "LEFT JOIN ($esql) eu ON eu.id=u.id ".
+               "WHERE u.deleted = 0 AND eu.id=u.id ";
+    } else {
+        $wherefilter = '';
+        if ($filter == FILTER_SUBMITTED) {
+           $wherefilter = ' AND s.timecreated > 0';
+        }
+        
+        $sql = "SELECT u.id FROM {user} u ".
+               "LEFT JOIN ($esql) eu ON eu.id=u.id ".
+               "LEFT JOIN {progassessment_submissions} s ON (u.id = s.userid) " .
+               "WHERE u.deleted = 0 AND eu.id=u.id ".
+               'AND s.id = '. $progassessment->id .
+                $wherefilter;
+    }
+    
+    $users = $DB->get_records_sql($sql, $params);
+    if (!empty($users)) {
+       $users = array_keys($users);
+    }
+    
+    // if groupmembersonly used, remove users who are not in any group
+    if ($users and !empty($CFG->enablegroupmembersonly) and $cm->groupmembersonly) {
+        if ($groupingusers = groups_get_grouping_members($cm->groupingid, 'u.id', 'u.id')) {
+            $users = array_intersect($users, array_keys($groupingusers));
+        }
+    }
+    
+    $tablecolumns = array('picture', 'fullname', 'grade', 'timecreated', 'isgraded');
+    
+    $tableheaders = array('',
+        get_string('fullname'),
+        get_string('grade'),
+        get_string('lastmodified').' ('.get_string('submission', 'progassessment').')',
+        get_string('isgraded', 'progassessment'));
+        
+    require_once($CFG->libdir.'/tablelib.php');
+    $table = new flexible_table('mod-progassessment-submissions');
+
+    $table->define_columns($tablecolumns);
+    $table->define_headers($tableheaders);
+    $table->define_baseurl($CFG->wwwroot.'/mod/progassessment/submissions.php?id='.$cm->id.'&amp;currentgroup='.$currentgroup);
+
+    $table->sortable(true, 'lastname');//sorted by lastname by default
+    $table->collapsible(true);
+    $table->initialbars(true);
+
+    $table->column_suppress('picture');
+    $table->column_suppress('fullname');
+
+    $table->column_class('picture', 'picture');
+    $table->column_class('fullname', 'fullname');
+    $table->column_class('grade', 'grade');
+    $table->column_class('timecreated', 'timecreated');
+    $table->column_class('isgraded', 'isgraded');
+
+    $table->set_attribute('cellspacing', '0');
+    $table->set_attribute('id', 'attempts');
+    $table->set_attribute('class', 'submissions');
+    $table->set_attribute('width', '100%');
+    //$table->set_attribute('align', 'center');
+
+    // Start working -- this is necessary as soon as the niceties are over
+    $table->setup();
+
+    if (empty($users)) {
+        echo $OUTPUT->heading(get_string('nosubmitusers','progassessment'));
+        echo '</div>';
+        return true;
+    }
+    
+    echo '<div style="text-align:right"><a href="submissions.php?id='.$cm->id.'&amp;download=zip">'.get_string('downloadall', 'progassessment').'</a></div>';
+    
+    /// Construct the SQL
+
+    $where = "";
+    if ($where) {
+        $where .= ' AND ';
+    }
+    
+    if ($filter == FILTER_SUBMITTED) {
+       $where .= 's.timecreated > 0 AND ';
+    }
+    
+    if ($sort = $table->get_sql_sort()) {
+        $sort = ' ORDER BY '.$sort;
+    }
+
+    $ufields = user_picture::fields('u');
+    
+    $select = "SELECT @rownum := @rownum +1 AS rownum, $ufields, s.id AS submissionid, s.grade, s.timecreated, s.isgraded ";
+    $sql = 'FROM (SELECT @rownum :=0) r, {user} u '.
+           'LEFT JOIN {progassessment_submissions} s ON u.id = s.userid
+            AND s.progassessment = '.$progassessment->id.' '.
+           'WHERE '.$where.'u.id IN ('.implode(',',$users).') ';
+    
+    $ausers = $DB->get_records_sql($select.$sql.$sort, $params, $table->get_page_start(), $table->get_page_size());
+    $table->pagesize($perpage, count($users));
+    
+    // offset used to calculate index of student in that particular query, needed for the pop up to know who's next
+    $offset = $page * $perpage;
+    $grademenu = make_grades_menu($progassessment->maxgrade);
+    
+    // fill table
+    if ($ausers !== false) {
+        $grading_info = grade_get_grades($course->id, 'mod', 'progassessment', $progassessment->id, $users);
+        
+        $endposition = $offset + $perpage;
+        $currentposition = 0;
+        
+        foreach ($ausers as $auser) {
+            
+            if ($currentposition == $offset && $offset < $endposition) {
+                
+                $final_grade = $grading_info->items[0]->grades[$auser->id];
+                $grademax = $grading_info->items[0]->grademax;
+                $final_grade->formatted_grade = round($final_grade->grade,2) .' / ' . round($grademax,2);
+                $locked_overridden = 'locked';
+                if ($final_grade->overridden) {
+                    $locked_overridden = 'overridden';
+                }
+
+                $picture = $OUTPUT->user_picture($auser);
+
+                if (empty($auser->submissionid)) {
+                    $auser->grade = -1; //no submission yet
+                }
+
+                if (!empty($auser->submissionid)) {
+                ///Prints student answer and student modified date
+                ///attach file or print link to student answer, depending on the type of the assignment.
+                ///Refer to print_student_answer in inherited classes.
+                    if ($auser->timecreated > 0) {
+                        $studentmodified = '<div id="ts'.$auser->id.'">'.progassessment_print_student_answer($progassessment, $auser->id)
+                                         . userdate($auser->timecreated).'</div>';
+                    } else {
+                        $studentmodified = '<div id="ts'.$auser->id.'">&nbsp;</div>';
+                    }
+                ///Print grade, dropdown or text
+                    if ($auser->isgraded == 1) {
+                        
+                        if ($final_grade->locked or $final_grade->overridden) {
+                            $grade = '<div id="g'.$auser->id.'" class="'. $locked_overridden .'">'.$final_grade->formatted_grade.'</div>';
+                        } else {
+                            $grade = '<div id="g'.$auser->id.'">'.progassessment_display_grade($progassessment, $auser->isgraded, $auser->grade).'</div>';
+                        }
+
+                    } else {
+                       
+                        if ($final_grade->locked or $final_grade->overridden) {
+                            $grade = '<div id="g'.$auser->id.'" class="'. $locked_overridden .'">'.$final_grade->formatted_grade.'</div>';
+                        } else {
+                            $grade = '<div id="g'.$auser->id.'">'.progassessment_display_grade($progassessment, $auser->isgraded, $auser->grade).'</div>';
+                        }
+                    }
+                } else {
+                    $studentmodified = '<div id="ts'.$auser->id.'">&nbsp;</div>';
+
+                    if ($final_grade->locked or $final_grade->overridden) {
+                        $grade = '<div id="g'.$auser->id.'">'.$final_grade->formatted_grade . '</div>';
+                    } else {
+                        $grade = '<div id="g'.$auser->id.'">-</div>';
+                    }
+                }
+
+                if (empty($auser->isgraded)) { /// Confirm we have exclusively 0 or 1
+                    $auser->isgraded = 0;
+                } else {
+                    $auser->isgraded = 1;
+                }
+
+                $isgradedtext = ($auser->isgraded == 1) ? "1" : "0"; // TODO
+                
+                $isgraded  = '<div id="up'.$auser->id.'" class="s'.$auser->isgraded.'">'.$isgradedtext.'</div>';
+         
+                $userlink = '<a href="' . $CFG->wwwroot . '/user/view.php?id=' . $auser->id . '&amp;course=' . $course->id . '">' . fullname($auser, has_capability('moodle/site:viewfullnames', $context)) . '</a>';
+                $row = array($picture, $userlink, $grade, $studentmodified, $isgraded);
+            
+                $table->add_data($row);
+            }
+            
+            $currentposition++;
+        }
+    }
+    
+    $table->print_html();  /// Print the whole table
+    
     echo '</div>';
     
+    
+    /// Mini form for setting user preference
+
+    $formaction = new moodle_url('/mod/progassessment/submissions.php', array('id'=>$cm->id));
+    $mform = new MoodleQuickForm('optionspref', 'post', $formaction, '', array('class'=>'optionspref'));
+
+    $mform->addElement('hidden', 'updatepref');
+    $mform->setDefault('updatepref', 1);
+    $mform->addElement('header', 'qgprefs', get_string('optionalsettings', 'progassessment'));
+    $mform->addElement('select', 'filter', get_string('show'),  $filters);
+
+    $mform->setDefault('filter', $filter);
+
+    $mform->addElement('text', 'perpage', get_string('pagesize', 'assignment'), array('size'=>1));
+    $mform->setDefault('perpage', $perpage);
+
+    $mform->addElement('submit', 'savepreferences', get_string('savepreferences'));
+
+    $mform->display();
     
     
     echo $OUTPUT->footer();
