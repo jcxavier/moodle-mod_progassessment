@@ -1093,6 +1093,44 @@ function progassessment_get_available_languages() {
     return $languages;
 }
 
+//Returns an array with the list of metrics available in the server.
+//If an error occurs while connecting to the server, the resulting array is empty.
+function progassessment_get_available_metrics() {
+
+    $metrics = array();
+    $client = progassessment_get_client();
+    $result = $client->getMetrics();
+    
+    foreach ($result->item as $langarray) {
+        
+        if ($langarray->value === "") {
+            $metrics[$langarray->key] = array();
+            continue;
+        }
+        
+        foreach ($langarray->value->item as $metrictype) {
+            
+            foreach ($metrictype->value->item as $metric) {
+                
+                $metrics[$langarray->key][$metrictype->key][$metric->key] = $metric->value;
+                
+            }
+        }
+    }
+
+    return $metrics;
+}
+
+function progassessment_get_metric_keys() {
+    
+    $keys = array ( 'halstead' => get_string('keyshalstead', 'progassessment'),
+                    'style' => get_string('keysstyle', 'progassessment'),
+                    'misc' => get_string('keysmisc', 'progassessment')
+                  );
+                  
+    return $keys;
+}
+
 function progassessment_process_form_languages($progassessment) {
     global $progassessment_languages;
     return $progassessment_languages[$progassessment->proglanguage];

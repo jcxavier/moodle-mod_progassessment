@@ -70,6 +70,10 @@ class mod_progassessment_mod_form extends moodleform_mod {
         $file_storage = get_file_storage();
 
         $progassessment_languages = progassessment_get_available_languages();
+        
+        $progassessment_metrics = progassessment_get_available_metrics();
+        $progassessment_keys = progassessment_get_metric_keys();
+        
 //-------------------------------------------------------------------------------
         //Adding the "general" fieldset, where all the common settings are showed
         $mform->addElement('header', 'general', get_string('general', 'form'));
@@ -145,9 +149,51 @@ class mod_progassessment_mod_form extends moodleform_mod {
 
 //-------------------------------------------------------------------------------
         //Programming languages
+        $mform->addElement('html',
+            '<script>
+                function progLangChanged() {
+                    var select = document.getElementById("id_proglanguage");
+                    var lang = select.options[select.selectedIndex].text;
+                    
+                    if (lang == "C++")
+                        lang = "CPP";
+                    else if (lang == "C#")
+                        lang = "CS";
+                    
+                    hideAllStatic();
+                    showStatic(lang);
+                }
+                
+                function showStatic(lang) {
+                    document.getElementById("saheader" + lang).style.display = \'block\';
+                }
+                
+                function hideAllStatic() {
+                    document.getElementById("saheaderC").style.display = \'none\';
+                    document.getElementById("saheaderCPP").style.display = \'none\';
+                    document.getElementById("saheaderCS").style.display = \'none\';
+                    document.getElementById("saheaderSQL").style.display = \'none\';
+                    document.getElementById("saheaderScheme").style.display = \'none\';
+                    document.getElementById("saheaderPython").style.display = \'none\';
+                    document.getElementById("saheaderJava").style.display = \'none\';
+                }
+            </script>'
+        );
+        
         $mform->addElement('header', 'proglanguagesheader', get_string('proglanguages', 'progassessment'));
-        $mform->addElement('select', 'proglanguage', get_string('proglanguage', 'progassessment'), $progassessment_languages);
-
+        
+        $select_list = "";
+        
+        for ($i = 0; $i != count($progassessment_languages); $i++)
+            $select_list .= '<option value="'.$i.'">'.$progassessment_languages[$i].'</option>';
+        
+        $mform->addElement('html', '
+        	<div class="fitem"><div class="fitemtitle"><label for="id_proglanguage">Programming language </label></div>
+        	<div class="felement fselect">
+        	<select name="proglanguage" id="id_proglanguage" onChange="progLangChanged()">' 
+        	    .$select_list.
+            '</select></div></div>');
+        
         if ($instance) {
             $i = 0;
             
@@ -210,7 +256,115 @@ class mod_progassessment_mod_form extends moodleform_mod {
 
         $num_testfiles = max(1, count($testfiles));
         $this->repeat_testcases($num_testfiles, $testfiles, $filepickeroptions);
+    
+//-------------------------------------------------------------------------------
+        //Static analysis 
+
+         $mform->addElement('html',
+                '<script type="text/javascript">
+                    function visToggle(f) {       
+                        if (f.checked) {
+                            document.getElementById(f.id + "_min").style.visibility=\'visible\';
+                            document.getElementById(f.id + "_max").style.visibility=\'visible\';
+                            document.getElementById(f.id + "_weight").style.visibility=\'visible\';
+                            document.getElementById(f.id + "_min_label").style.visibility=\'visible\';
+                            document.getElementById(f.id + "_max_label").style.visibility=\'visible\';
+                            document.getElementById(f.id + "_weight_label").style.visibility=\'visible\';
+                        } else {
+                            document.getElementById(f.id + "_min").style.visibility=\'hidden\';
+                            document.getElementById(f.id + "_max").style.visibility=\'hidden\';
+                            document.getElementById(f.id + "_weight").style.visibility=\'hidden\';
+                            document.getElementById(f.id + "_min_label").style.visibility=\'hidden\';
+                            document.getElementById(f.id + "_max_label").style.visibility=\'hidden\';
+                            document.getElementById(f.id + "_weight_label").style.visibility=\'hidden\';
+                        }
+                    }
+                    
+                    function saToggled(lang) {
+                        var select = document.getElementById("id_staticanalysistoggle" + lang);
+                        var idx = select.selectedIndex;
+
+                        if (idx == 0)
+                            document.getElementById("divsa" + lang).style.display = \'none\';
+                        else
+                            document.getElementById("divsa" + lang).style.display = \'block\';
+                    }
+                </script>');
         
+        $width = 80;
+
+        foreach ($progassessment_metrics as $lang => $metrics) {
+        
+            if ($lang === "C++")
+                $lang = "CPP";
+            else if ($lang === "C#")
+                $lang = "CS";
+        
+            $mform->addElement('header', 'saheader'.$lang, get_string('titlesa', 'progassessment'));
+                
+            if (count($metrics) > 0) {
+                
+                //toggle static analysis
+                
+                $select_list = "";
+
+                for ($i = 0; $i != count($ynoptions); $i++)
+                    $select_list .= '<option value="'.$i.'">'.$ynoptions[$i].'</option>';
+                
+                $mform->addElement('html',
+                    '<div class="fitem"><div class="fitemtitle"><label for="id_staticanalysistoggle'.$lang.'">'.get_string('enablesa', 'progassessment').'</label></div>
+                    <div class="felement fselect"><select onChange="saToggled(\''.$lang.'\')" name="staticanalysistoggle'.$lang.'" id="id_staticanalysistoggle'.$lang.'">'
+                    	.$select_list.
+                    '</select></div></div>');
+                $mform->setDefault('staticanalysistoggle'.$lang, 0);
+        
+                $mform->addElement('select', 'maxsa'.$lang, get_string('valuesa', 'progassessment'), $progassessment_max_grade_choices);
+                $mform->setDefault('maxsa'.$lang, $CFG->progassessment_maxstatic);
+                $mform->disabledIf('maxsa'.$lang, 'staticanalysistoggle'.$lang, 'eq', 0);
+        
+                $mform->addElement('html', '<div id="divsa'.$lang.'">');
+        
+                foreach ($metrics as $key => $group) {
+                    $mform->addElement('html', '<br /><h5>'.$progassessment_keys[$key].'</h5><br />');
+                    
+                    $style_hide = ($key === "style" ? "display:none; " : "");
+            
+                    foreach ($group as $id => $metric) {
+                        $mform->addElement('html',
+                            '<div class="fitem"><div class="fitemtitle"><label for="'.$id.$lang.'">'.$metric.'</label></div><div class="felement fcheckbox"><span>
+                                <input type="checkbox" onClick="visToggle(this.form.'.$id.$lang.')" id="'.$id.$lang.'" name="'.$id.$lang.'" />
+                                
+                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                
+                                <label style="'.$style_hide.'visibility:hidden" id="'.$id.$lang.'_min_label">'.get_string('min', 'progassessment').'
+                                    <input required style="width:'.$width.'px; visibility:hidden" type="number" value="0" min="0"
+                                        id="'.$id.$lang.'_min" name="'.$id.$lang.'_min" />
+                                </label>
+                                <label style="'.$style_hide.'visibility:hidden" id="'.$id.$lang.'_max_label">'.get_string('max', 'progassessment').'
+                                    <input required style="width:'.$width.'px; visibility:hidden" type="number" value="0" min="0"
+                                        id="'.$id.$lang.'_max" name="'.$id.$lang.'_max" />
+                                </label>
+                                <label style="visibility:hidden" id="'.$id.$lang.'_weight_label">'.get_string('weight', 'progassessment').'
+                                    <input required style="width:'.$width.'px; visibility:hidden" type="number" value="1" min="0" max="100" step="1"
+                                        id="'.$id.$lang.'_weight" name="'.$id.$lang.'_weight" />
+                                </label>
+                            </span></div></div>');
+                            
+                        $mform->disabledIf($id.$lang,           'staticanalysistoggle'.$lang, 'eq', 0);
+                        $mform->disabledIf($id.$lang.'_min',    'staticanalysistoggle'.$lang, 'eq', 0);
+                        $mform->disabledIf($id.$lang.'_max',    'staticanalysistoggle'.$lang, 'eq', 0);
+                        $mform->disabledIf($id.$lang.'_weight', 'staticanalysistoggle'.$lang, 'eq', 0);
+                    }
+                }
+                
+                $mform->addElement('html', '</div><script>saToggled(\''.$lang.'\');</script>');
+            }
+            else {
+                $mform->addElement('static', get_string('nometrics', 'progassessment'), get_string('nometricsdesc', 'progassessment'));
+            }
+        }
+        
+        $mform->addElement('html', '<script>hideAllStatic(); showStatic("'.$instance->proglanguages.'");</script>');
         
 //-------------------------------------------------------------------------------
         // Plagiarism block

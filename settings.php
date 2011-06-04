@@ -36,6 +36,12 @@ $settings->add(new admin_setting_configselect('progassessment_maxgrade',
                     get_string('configmaxgrade', 'progassessment'),
                     count($max_grade_choices)-1,
                     $max_grade_choices));
+                    
+$settings->add(new admin_setting_configselect('progassessment_maxstatic',
+                    get_string('valuesa', 'progassessment'),
+                    get_string('configmaxstatic', 'progassessment'),
+                    20,
+                    $max_grade_choices));                    
 
 $progassessment_gradingmethod_choices = array(get_string('lastsubmission', 'progassessment'), get_string('bestsubmission', 'progassessment'));
 

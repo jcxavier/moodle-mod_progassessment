@@ -16,6 +16,7 @@ $string['modulenameplural'] = 'Programming Assessments';
 $string['configmaxbytes'] = 'Default maximum programming assessment size for all programming assessments on the site (subject to course limits and other local settings)';
 $string['configmaxsubmissions'] = 'Default maximum number of submissions for all programming assessments on the site';
 $string['configmaxgrade'] = 'Default maximum grade for all programming assessments on the site';
+$string['configmaxstatic'] = 'Default percentage of the maximum grade reserved for the static analysis for all programming assessments on the site';
 $string['configgradingmethod'] = 'Default grading method for all programming assessments on the site';
 $string['configtolerancepenalty'] = 'Default penalty (in percentage) for late submissions for all programming assessments on the site';
 
@@ -121,4 +122,17 @@ $string['optionalsettings'] = 'Optional settings';
 $string['submitted'] = 'Submitted';
 $string['viewsubmissions'] = 'View {$a} submitted assessments';
 $string['yes'] = 'Yes';
+
+$string['enablesa'] = 'Enable static analysis';
+$string['min'] = 'Min';
+$string['max'] = 'Max';
+$string['nometrics'] = 'No metrics available';
+$string['nometricsdesc'] = 'There are no metrics available for the selected language.';
+$string['titlesa'] = 'Static analysis';
+$string['valuesa'] = 'Grade %';
+$string['weight'] = 'Weight';
+
+$string['keyshalstead'] = 'Halstead software science metrics';
+$string['keysstyle'] = 'Style metrics';
+$string['keysmisc'] = 'Miscellaneous metrics';
 ?>
