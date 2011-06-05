@@ -1156,10 +1156,7 @@ function progassessment_process_static_analysis(&$progassessment, $mform) {
 	$metrics = progassessment_get_available_metrics();
 	$metrics = $metrics[$lang];
 	
-	if ($lang === "C++")
-		$lang = "CPP";
-	else if ($lang === "C#")
-		$lang = "CS";	
+	$lang = progassessment_parse_language($lang);	
 	
 	$raw_data = $mform->get_raw_data();
 	$progassessment->sagrade = (isset($raw_data['maxsa'.$lang]) ? $raw_data['maxsa'.$lang] : $CFG->progassessment_maxstatic);
@@ -1186,6 +1183,32 @@ function progassessment_process_static_analysis(&$progassessment, $mform) {
 	$progassessment->sametrics = $sametrics;
 }
 
+function progassessment_get_metrics($progassessment) {
+    global $DB;
+    
+    $res = $DB->get_records_sql(   'SELECT s.id, s.sagroup, s.metric, s.min, s.max, s.weight
+                                    FROM {progassessment} p INNER JOIN {progassessment_static_analysis} s ON p.id = s.progassessment
+                                    WHERE p.id = '.$progassessment->id);
+    
+    if (count($res) == 0)
+        return null;
+    
+    foreach ($res as $prog)
+        $metrics[$prog->sagroup][$prog->metric] = array('min' => $prog->min, 'max' => $prog->max, 'weight' => $prog->weight);
+    
+    return $metrics;
+}
+
+function progassessment_parse_language($lang) {
+    
+    if ($lang === "C++")
+		$lang = "CPP";
+	else if ($lang === "C#")
+		$lang = "CS";
+		
+	return $lang;
+}
+
 function progassessment_delete_metrics($id) {
     global $DB;
     
@@ -1197,6 +1220,8 @@ function progassessment_update_metrics($progassessment) {
     
     progassessment_delete_metrics($progassessment->id);
     
+    $lang = progassessment_parse_language($progassessment->proglanguages);
+    
     $metric = array();
     $metric['progassessment'] = $progassessment->id;
     
@@ -1206,7 +1231,7 @@ function progassessment_update_metrics($progassessment) {
     
         foreach ($group as $metric_key => $metric_array) {
     
-            $metric['metric'] = $metric_key;
+            $metric['metric'] = $metric_key.$lang;
             $metric['min'] = (double)$metric_array['min'];
             $metric['max'] = (double)$metric_array['max'];
             $metric['weight'] = (double)$metric_array['weight'];
@@ -1354,11 +1379,6 @@ function progassessment_process_intro_file($progassessment, $mform) {
     $context = get_context_instance(CONTEXT_MODULE, $cmid);
     $data = $mform->get_data();
 
-    /* if ($file_storage->file_exists($context->id, 'progassessment_description', $data->descriptionfile, "/", $intro_filename)) {
-        $intro_file = $file_storage->get_file($context->id, 'progassessment_description', $data->descriptionfile, "/", $intro_filename);
-
-	    $intro_file->delete();
-    } */
     
     if ($file_storage->file_exists($context->id, 'mod_progassessment', 'progassessment_description', $data->descriptionfile, "/", $intro_filename)) {
         $intro_file = $file_storage->get_file($context->id, 'mod_progassessment', 'progassessment_description', $data->descriptionfile, "/", $intro_filename);

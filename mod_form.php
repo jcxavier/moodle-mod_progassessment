@@ -284,12 +284,14 @@ class mod_progassessment_mod_form extends moodleform_mod {
         
         $width = 80;
 
+        
+        if ($instance)
+            $previous_metrics = progassessment_get_metrics($instance);
+            
+
         foreach ($progassessment_metrics as $lang => $metrics) {
         
-            if ($lang === "C++")
-                $lang = "CPP";
-            else if ($lang === "C#")
-                $lang = "CS";
+            $lang = progassessment_parse_language($lang);
         
             $mform->addElement('header', 'saheader'.$lang, get_string('titlesa', 'progassessment'));
                 
@@ -325,23 +327,42 @@ class mod_progassessment_mod_form extends moodleform_mod {
 					$val = ($key === "style" ? '1' : '0');
             
                     foreach ($group as $id => $metric) {
+                        
+                        
+                        if (isset($previous_metrics[$key][$id.$lang])) {
+                            $current_metric = $previous_metrics[$key][$id.$lang];
+                            $ischecked = "checked";
+                            $current_min = $current_metric['min'];
+                            $current_max = $current_metric['max'];
+                            $current_weight = $current_metric['weight'];
+                        } else {
+                            $current_metric = null;
+                            $ischecked = "";
+                            $current_min = $val;
+                            $current_max = $val;
+                            $current_weight = "1";
+                        }
+                        
+                        
                         $mform->addElement('html',
                             '<div class="fitem"><div class="fitemtitle"><label for="'.$id.$lang.'">'.$metric.'</label></div><div class="felement fcheckbox"><span>
                                 <input type="checkbox" value="1" onClick="visToggle(this.form.'.$id.$lang.')"
-									id="'.$id.$lang.'" name="'.$id.$lang.'" />
+									id="'.$id.$lang.'" name="'.$id.$lang.'" '.$ischecked.'/>
                                 
                                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                                 
                                 <label style="'.$style_hide.'visibility:hidden" id="'.$id.$lang.'_min_label">'.get_string('min', 'progassessment').'
-                                    <input required style="width:'.$width.'px; visibility:hidden" type="number" value="'.$val.'" min="0"
+                                    <input required style="width:'.$width.'px; visibility:hidden" type="number" value="'.$current_min.'" min="0"
                                         id="'.$id.$lang.'_min" name="'.$id.$lang.'_min" />
                                 </label>
+                                
                                 <label style="'.$style_hide.'visibility:hidden" id="'.$id.$lang.'_max_label">'.get_string('max', 'progassessment').'
-                                    <input required style="width:'.$width.'px; visibility:hidden" type="number" value="'.$val.'" min="0"
+                                    <input required style="width:'.$width.'px; visibility:hidden" type="number" value="'.$current_max.'" min="0"
                                         id="'.$id.$lang.'_max" name="'.$id.$lang.'_max" />
                                 </label>
+                                
                                 <label style="visibility:hidden" id="'.$id.$lang.'_weight_label">'.get_string('weight', 'progassessment').'
-                                    <input required style="width:'.$width.'px; visibility:hidden" type="number" value="1" min="0" max="100" step="1"
+                                    <input required style="width:'.$width.'px; visibility:hidden" type="number" value="'.$current_weight.'" min="0" max="100" step="1"
                                         id="'.$id.$lang.'_weight" name="'.$id.$lang.'_weight" />
                                 </label>
                             </span></div></div>');
