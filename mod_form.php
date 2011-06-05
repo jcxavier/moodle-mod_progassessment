@@ -299,18 +299,20 @@ class mod_progassessment_mod_form extends moodleform_mod {
                 
                 $select_list = "";
 
-                for ($i = 0; $i != count($ynoptions); $i++)
-                    $select_list .= '<option value="'.$i.'">'.$ynoptions[$i].'</option>';
+                for ($i = 0; $i != count($ynoptions); $i++) {
+                    $select_list .= '<option value="'.$i.'" '.
+                    ($instance && ($instance->saenabled == $i) ? 'selected="selected"' : "").
+                    '>'.$ynoptions[$i].'</option>';
+                }
                 
                 $mform->addElement('html',
                     '<div class="fitem"><div class="fitemtitle"><label for="id_staticanalysistoggle'.$lang.'">'.get_string('enablesa', 'progassessment').'</label></div>
                     <div class="felement fselect"><select onChange="saToggled(\''.$lang.'\')" name="staticanalysistoggle'.$lang.'" id="id_staticanalysistoggle'.$lang.'">'
                     	.$select_list.
                     '</select></div></div>');
-                $mform->setDefault('staticanalysistoggle'.$lang, 0);
-        
+                
                 $mform->addElement('select', 'maxsa'.$lang, get_string('valuesa', 'progassessment'), $progassessment_max_grade_choices);
-                $mform->setDefault('maxsa'.$lang, $CFG->progassessment_maxstatic);
+                $mform->setDefault('maxsa'.$lang, ($instance ? $instance->sagrade : $CFG->progassessment_maxstatic));
                 $mform->disabledIf('maxsa'.$lang, 'staticanalysistoggle'.$lang, 'eq', 0);
                 $mform->addHelpButton('maxsa'.$lang, 'valuesa', 'progassessment');
         

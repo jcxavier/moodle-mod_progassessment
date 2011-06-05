@@ -54,11 +54,11 @@ function progassessment_add_instance($progassessment, $mform) {
 
     $progassessment->proglanguages = progassessment_process_form_languages($progassessment, $mform);
 	progassessment_process_static_analysis($progassessment, $mform);
-	
-	// TODO deal with static analysis
 
     $id = $DB->insert_record('progassessment', $progassessment);
     $progassessment->id = $id;
+
+    progassessment_update_metrics($progassessment);
 
     $progassessment->skeletonfile = progassessment_process_skeleton_file($progassessment, $mform);
     $DB->set_field('progassessment', 'skeletonfile', $progassessment->skeletonfile, array("id" => $progassessment->id));
@@ -99,7 +99,7 @@ function progassessment_update_instance($progassessment, $mform) {
     $progassessment->proglanguages = progassessment_process_form_languages($progassessment, $mform);
 	progassessment_process_static_analysis($progassessment, $mform);
 
-	// TODO deal with static analysis
+	progassessment_update_metrics($progassessment);
 	
     $old_progassessment = $DB->get_record('progassessment', array('id' => $progassessment->instance));
 
@@ -135,6 +135,8 @@ function progassessment_delete_instance($id) {
 
     $result = $DB->delete_records('progassessment', array('id' => $progassessment->id));
     progassessment_remove_instance_from_server($progassessment);
+    
+    progassessment_delete_metrics($id);
 
     $submissions = $DB->get_records('progassessment_submissions', array('progassessment' => $progassessment->id));
 
@@ -1147,6 +1149,8 @@ function progassessment_process_form_languages($progassessment, $mform) {
 }
 
 function progassessment_process_static_analysis(&$progassessment, $mform) {
+    global $CFG;
+    
 	$lang = $progassessment->proglanguages;
 	
 	$metrics = progassessment_get_available_metrics();
@@ -1158,16 +1162,16 @@ function progassessment_process_static_analysis(&$progassessment, $mform) {
 		$lang = "CS";	
 	
 	$raw_data = $mform->get_raw_data();
+	$progassessment->sagrade = (isset($raw_data['maxsa'.$lang]) ? $raw_data['maxsa'.$lang] : $CFG->progassessment_maxstatic);
 	
-	if (!isset($raw_data['staticanalysistoggle'.$lang]) || !$metrics) {
+	if (!isset($raw_data['staticanalysistoggle'.$lang]) || ($raw_data['staticanalysistoggle'.$lang] == 0) || (!$metrics)) {
 		$progassessment->saenabled = false;
 		return;
 	}
 	
 	$progassessment->saenabled = true;
-	$progassessment->sagrade = $raw_data['maxsa'.$lang]; 
 	
-	foreach ($metrics as $key=>$group)
+	foreach ($metrics as $key => $group)
 		foreach (array_keys($group) as $metric_keys) {
 		
 			if (isset($raw_data[$metric_keys.$lang])) {
@@ -1180,6 +1184,36 @@ function progassessment_process_static_analysis(&$progassessment, $mform) {
 		}
 		
 	$progassessment->sametrics = $sametrics;
+}
+
+function progassessment_delete_metrics($id) {
+    global $DB;
+    
+    $DB->delete_records('progassessment_static_analysis', array('progassessment' => $id));
+}
+
+function progassessment_update_metrics($progassessment) {
+    global $DB;
+    
+    progassessment_delete_metrics($progassessment->id);
+    
+    $metric = array();
+    $metric['progassessment'] = $progassessment->id;
+    
+    foreach ($progassessment->sametrics as $key => $group) {
+    
+        $metric['sagroup'] = $key;
+    
+        foreach ($group as $metric_key => $metric_array) {
+    
+            $metric['metric'] = $metric_key;
+            $metric['min'] = (double)$metric_array['min'];
+            $metric['max'] = (double)$metric_array['max'];
+            $metric['weight'] = (double)$metric_array['weight'];
+            
+            $DB->insert_record('progassessment_static_analysis', $metric);
+        }
+    }
 }
 
 function progassessment_is_student_code_line($line, $comment) {

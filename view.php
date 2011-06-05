@@ -193,6 +193,19 @@ function view_initial_info($progassessment, $context) {
     echo '<tr><td class="c0">'.get_string('feedbackdetail', 'progassessment').':</td>';
     echo '    <td class="c1">'.$feedback_detail.'</td></tr>';
 
+    //empty line
+    echo '<tr><td>&nbsp;</td></tr>';
+    
+    // static analysis enabled
+    $static_analysis = $progassessment->saenabled ? get_string('yes', 'progassessment') : get_string('no', 'progassessment');
+    echo '<tr><td class="c0">'.get_string('titlesa', 'progassessment').':</td>';
+    echo '    <td class="c1">'.$static_analysis.'</td></tr>';
+    
+    //grade % for static analysis
+    if ($progassessment->saenabled) {
+        echo '<tr><td class="c0">'.get_string('valuesa','progassessment').':</td>';
+        echo '    <td class="c1">'.$progassessment->sagrade.'</td></tr>';
+    }
 
     //show the skeleton file to graders
     if ($progassessment->skeletonfile && has_capability('mod/progassessment:grade', $context)) {
