@@ -33,7 +33,7 @@ $string['maxgrade'] = 'Maximum grade';
 $string['nograde'] = 'No grade';
 $string['grading'] = 'Grading';
 $string['gradingmethod'] = 'Grading method';
-$string['gradingmethod_help'] = 'Chose which submission should be taken into account for the final grade';
+$string['gradingmethod_help'] = 'Choose which submission should be taken into account for the final grade';
 $string['lastsubmission'] = 'Last submission';
 $string['bestsubmission'] = 'Best submission';
 $string['grade'] = 'Grade';
@@ -130,6 +130,9 @@ $string['nometrics'] = 'No metrics available';
 $string['nometricsdesc'] = 'There are no metrics available for the selected language.';
 $string['titlesa'] = 'Static analysis';
 $string['valuesa'] = 'Grade %';
+$string['valuesa_help'] =  'The percentage of the total grade reserved for static analysis.
+                            With a value of 20%, a student graded 50/100 with full score in the static analysis will be graded
+                            0.8 * (50/100) + 0.2 * (100/100) = 60/100.';
 $string['weight'] = 'Weight';
 
 $string['keyshalstead'] = 'Halstead software science metrics';

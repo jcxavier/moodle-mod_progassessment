@@ -185,26 +185,17 @@ class mod_progassessment_mod_form extends moodleform_mod {
         $select_list = "";
         
         for ($i = 0; $i != count($progassessment_languages); $i++)
-            $select_list .= '<option value="'.$i.'">'.$progassessment_languages[$i].'</option>';
+            if ($instance && ($progassessment_languages[$i] == $instance->proglanguages))
+                $select_list .= '<option value="'.$i.'" selected="selected">'.$progassessment_languages[$i].'</option>';
+            else
+                $select_list .= '<option value="'.$i.'">'.$progassessment_languages[$i].'</option>';
         
         $mform->addElement('html', '
-        	<div class="fitem"><div class="fitemtitle"><label for="id_proglanguage">Programming language </label></div>
+        	<div class="fitem"><div class="fitemtitle"><label for="id_proglanguage">'.get_string('proglanguage', 'progassessment').' </label></div>
         	<div class="felement fselect">
         	<select name="proglanguage" id="id_proglanguage" onChange="progLangChanged()">' 
         	    .$select_list.
             '</select></div></div>');
-        
-        if ($instance) {
-            $i = 0;
-            
-            foreach ($progassessment_languages as $lang) {
-                if ($lang == $instance->proglanguages) {
-                    $mform->setDefault('proglanguage', $i);
-                    break;
-                }
-                ++$i;
-            }
-        }
 
         if (sizeof($progassessment_languages) == 0) {
             $mform->addElement('static', get_string('noproglanguages', 'progassessment'), get_string('noproglanguagesdesc', 'progassessment'));
@@ -321,6 +312,7 @@ class mod_progassessment_mod_form extends moodleform_mod {
                 $mform->addElement('select', 'maxsa'.$lang, get_string('valuesa', 'progassessment'), $progassessment_max_grade_choices);
                 $mform->setDefault('maxsa'.$lang, $CFG->progassessment_maxstatic);
                 $mform->disabledIf('maxsa'.$lang, 'staticanalysistoggle'.$lang, 'eq', 0);
+                $mform->addHelpButton('maxsa'.$lang, 'valuesa', 'progassessment');
         
                 $mform->addElement('html', '<div id="divsa'.$lang.'">');
         
@@ -328,20 +320,22 @@ class mod_progassessment_mod_form extends moodleform_mod {
                     $mform->addElement('html', '<br /><h5>'.$progassessment_keys[$key].'</h5><br />');
                     
                     $style_hide = ($key === "style" ? "display:none; " : "");
+					$val = ($key === "style" ? '1' : '0');
             
                     foreach ($group as $id => $metric) {
                         $mform->addElement('html',
                             '<div class="fitem"><div class="fitemtitle"><label for="'.$id.$lang.'">'.$metric.'</label></div><div class="felement fcheckbox"><span>
-                                <input type="checkbox" onClick="visToggle(this.form.'.$id.$lang.')" id="'.$id.$lang.'" name="'.$id.$lang.'" />
+                                <input type="checkbox" value="1" onClick="visToggle(this.form.'.$id.$lang.')"
+									id="'.$id.$lang.'" name="'.$id.$lang.'" />
                                 
                                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                                 
                                 <label style="'.$style_hide.'visibility:hidden" id="'.$id.$lang.'_min_label">'.get_string('min', 'progassessment').'
-                                    <input required style="width:'.$width.'px; visibility:hidden" type="number" value="0" min="0"
+                                    <input required style="width:'.$width.'px; visibility:hidden" type="number" value="'.$val.'" min="0"
                                         id="'.$id.$lang.'_min" name="'.$id.$lang.'_min" />
                                 </label>
                                 <label style="'.$style_hide.'visibility:hidden" id="'.$id.$lang.'_max_label">'.get_string('max', 'progassessment').'
-                                    <input required style="width:'.$width.'px; visibility:hidden" type="number" value="0" min="0"
+                                    <input required style="width:'.$width.'px; visibility:hidden" type="number" value="'.$val.'" min="0"
                                         id="'.$id.$lang.'_max" name="'.$id.$lang.'_max" />
                                 </label>
                                 <label style="visibility:hidden" id="'.$id.$lang.'_weight_label">'.get_string('weight', 'progassessment').'
@@ -349,6 +343,8 @@ class mod_progassessment_mod_form extends moodleform_mod {
                                         id="'.$id.$lang.'_weight" name="'.$id.$lang.'_weight" />
                                 </label>
                             </span></div></div>');
+							
+						$mform->addElement('html', '<script>visToggle(document.getElementById("'.$id.$lang.'"));</script>');
                             
                         $mform->disabledIf($id.$lang,           'staticanalysistoggle'.$lang, 'eq', 0);
                         $mform->disabledIf($id.$lang.'_min',    'staticanalysistoggle'.$lang, 'eq', 0);
@@ -364,7 +360,14 @@ class mod_progassessment_mod_form extends moodleform_mod {
             }
         }
         
-        $mform->addElement('html', '<script>hideAllStatic(); showStatic("'.$instance->proglanguages.'");</script>');
+        if ($instance)
+            $static_str = 'showStatic("'.$instance->proglanguages.'");';
+        else {
+            $akeys = array_keys($progassessment_metrics);
+            $static_str = 'showStatic("'.$akeys[0].'")';
+        }
+            
+        $mform->addElement('html', '<script>hideAllStatic(); '.$static_str.'</script>');
         
 //-------------------------------------------------------------------------------
         // Plagiarism block
@@ -379,7 +382,11 @@ class mod_progassessment_mod_form extends moodleform_mod {
         // add standard buttons, common to all modules
         $this->add_action_buttons();
     }
-
+	
+	function get_raw_data() {
+		return $this->_form->_submitValues;
+	}
+	
     function repeat_testcases($repeats, $testfiles, $filepickeroptions) {
         $addstring = get_string('addtestcasefile', 'progassessment');
         $repeathiddenname = 'testfiles_repeats';

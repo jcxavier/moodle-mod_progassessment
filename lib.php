@@ -52,7 +52,10 @@ function progassessment_add_instance($progassessment, $mform) {
     $progassessment->timecreated = time();
     $progassessment->timemodified = time();
 
-    $progassessment->proglanguages = progassessment_process_form_languages($progassessment);
+    $progassessment->proglanguages = progassessment_process_form_languages($progassessment, $mform);
+	progassessment_process_static_analysis($progassessment, $mform);
+	
+	// TODO deal with static analysis
 
     $id = $DB->insert_record('progassessment', $progassessment);
     $progassessment->id = $id;
@@ -93,8 +96,11 @@ function progassessment_update_instance($progassessment, $mform) {
     $progassessment->timemodified = time();
     $progassessment->id = $progassessment->instance;
 
-    $progassessment->proglanguages = progassessment_process_form_languages($progassessment);
+    $progassessment->proglanguages = progassessment_process_form_languages($progassessment, $mform);
+	progassessment_process_static_analysis($progassessment, $mform);
 
+	// TODO deal with static analysis
+	
     $old_progassessment = $DB->get_record('progassessment', array('id' => $progassessment->instance));
 
     $progassessment->skeletonfile = progassessment_process_skeleton_file($old_progassessment, $mform);
@@ -1131,9 +1137,49 @@ function progassessment_get_metric_keys() {
     return $keys;
 }
 
-function progassessment_process_form_languages($progassessment) {
+function progassessment_process_form_languages($progassessment, $mform) {
     global $progassessment_languages;
+    
+    $raw_data = $mform->get_raw_data();
+	$progassessment->proglanguage = (int)$raw_data['proglanguage'];
+	
     return $progassessment_languages[$progassessment->proglanguage];
+}
+
+function progassessment_process_static_analysis(&$progassessment, $mform) {
+	$lang = $progassessment->proglanguages;
+	
+	$metrics = progassessment_get_available_metrics();
+	$metrics = $metrics[$lang];
+	
+	if ($lang === "C++")
+		$lang = "CPP";
+	else if ($lang === "C#")
+		$lang = "CS";	
+	
+	$raw_data = $mform->get_raw_data();
+	
+	if (!isset($raw_data['staticanalysistoggle'.$lang]) || !$metrics) {
+		$progassessment->saenabled = false;
+		return;
+	}
+	
+	$progassessment->saenabled = true;
+	$progassessment->sagrade = $raw_data['maxsa'.$lang]; 
+	
+	foreach ($metrics as $key=>$group)
+		foreach (array_keys($group) as $metric_keys) {
+		
+			if (isset($raw_data[$metric_keys.$lang])) {
+	
+				$sametrics[$key][$metric_keys] = array( 'min' 		=> $raw_data[$metric_keys.$lang.'_min'],
+														'max' 		=> $raw_data[$metric_keys.$lang.'_max'],
+														'weight' 	=> $raw_data[$metric_keys.$lang.'_weight'] );
+				
+			}
+		}
+		
+	$progassessment->sametrics = $sametrics;
 }
 
 function progassessment_is_student_code_line($line, $comment) {
@@ -1453,18 +1499,6 @@ function progassessment_add_test_cases_file($progassessment, $mform, $context, $
         $out = "outputfile_$i";
         $file_storage = get_file_storage();
 
-/*        if ($file_storage->file_exists($context->id, 'progassessment_input', $data->$in, "/$progassessment->id/", $input_filename)) {
-            $input_file = $file_storage->get_file($context->id, 'progassessment_input', $data->$in, "/$progassessment->id/", $input_filename);
-            $input_file->delete();
-        }
-        $input_file = $mform->save_stored_file($in, $context->id, 'progassessment_input', $data->$in, "/$progassessment->id/", $input_filename);
-
-        if ($file_storage->file_exists($context->id, 'progassessment_output', $data->$out, "/$progassessment->id/", $output_filename)) {
-            $output_file = $file_storage->get_file($context->id, 'progassessment_output', $data->$out, "/$progassessment->id/", $output_filename);
-            $output_file->delete();
-        }
-        $output_file = $mform->save_stored_file($out, $context->id, 'progassessment_output', $data->$out, "/$progassessment->id/", $output_filename);
-*/
 
         if ($file_storage->file_exists($context->id, 'mod_progassessment', 'progassessment_input', $data->$in, "/$progassessment->id/", $input_filename)) {
             $input_file = $file_storage->get_file($context->id, 'mod_progassessment', 'progassessment_input', $data->$in, "/$progassessment->id/", $input_filename);
