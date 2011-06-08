@@ -237,7 +237,7 @@ function progassessment_cron () {
         $output_compile = $answ[1];
         $output_run = $answ[2];
         $output_diff = $answ[3];
-        $output_error = $answ[4];
+        $output_error = $answ[4];        
                 
         //update the result and output fields in the progassessment_submissions_testcases table
         $DB->set_field('progassessment_submissions_testcases', "result", $result, array("submission" => $p->submission, "testcase" => $p->testcase));
@@ -260,7 +260,21 @@ function progassessment_cron () {
                 $weight = (int) ($weight * (1.0 - $progassessment->tolerancepenalty/100.0));
             }
 
-            $grade = $submission->grade + $weight;
+            if ($progassessment->saenabled) {
+                $stanstr = "## static analysis ##";
+                $pos = strrpos($output_compile, $stanstr);
+                $arrstr = substr($output_compile, $pos + strlen($stanstr) + 1);
+                eval("\$metricresult = ".$arrstr.";");
+
+                $sagrade = progassessment_evaluate_static_analysis($progassessment, $metricresult);
+                $DB->set_field('progassessment_submissions', "sagrade", $sagrade, array("id" => $p->submission));
+            
+                $temp = $submission->grade + $weight;
+                $grade = (int)($temp * ((100.0 - $progassessment->sagrade) / 100.0) + $sagrade * ($progassessment->sagrade / 100.0));
+            }
+            else
+                $grade = $submission->grade + $weight;
+                
             $DB->set_field('progassessment_submissions', "grade", $grade, array("id" => $p->submission));
         }
 
@@ -315,6 +329,27 @@ function progassessment_cron () {
     return true;
 }
 
+function progassessment_evaluate_static_analysis($progassessment, $metricresults) {
+    $metrics = progassessment_get_metrics($progassessment);
+    $lang = $progassessment->proglanguages;
+    
+    $total = 0;
+    $weightsum = 0;
+    
+    foreach ($metrics as $groupkey => $group) {
+        foreach ($group as $key => $metricinfo) {
+            $originalkey = substr($key, 0, strlen($key) - strlen($lang));
+            $value = $metricresults[$groupkey][$originalkey];
+            
+            if ($metricinfo['min'] <= $value && $value <= $metricinfo['max'])
+                $total += $metricinfo['weight'];
+                
+            $weightsum += $metricinfo['weight'];
+        }
+    }
+    
+    return (int)(($total * 100.0) / $weightsum);
+}
 
 /**
  * Returns a link with info about the state of the assignment submissions

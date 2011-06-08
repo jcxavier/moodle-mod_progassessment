@@ -324,7 +324,6 @@ class mod_progassessment_mod_form extends moodleform_mod {
                     $mform->addElement('html', '<br /><h5>'.$progassessment_keys[$key].'</h5><br />');
                     
                     $style_hide = ($key === "style" ? "display:none; " : "");
-					$val = ($key === "style" ? '1' : '0');
             
                     foreach ($group as $id => $metric) {
                         
@@ -338,8 +337,8 @@ class mod_progassessment_mod_form extends moodleform_mod {
                         } else {
                             $current_metric = null;
                             $ischecked = "";
-                            $current_min = $val;
-                            $current_max = $val;
+                            $current_min = "0";
+                            $current_max = "0";
                             $current_weight = "1";
                         }
                         

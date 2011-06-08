@@ -388,8 +388,10 @@ function view_feedback($progassessment, $context, $submission_id) {
         //grade in the assignment
         echo $OUTPUT->heading(get_string('grade', 'progassessment'), 3, 'main trigger expanded');
         echo $OUTPUT->box_start('generalbox', 'intro');
-        echo '<b><big><center>'.$submission->grade.'</b></big> '.get_string('outof','progassessment').' '.$progassessment->maxgrade."</center>";
         
+        echo '<b><big><center>'.$submission->grade.'</b></big> '.
+            get_string('outof','progassessment').' '.$progassessment->maxgrade."</center>";
+
         //if the grade is 0, check if there was a compile error
         if ($submission->grade == 0) {
 
@@ -405,6 +407,17 @@ function view_feedback($progassessment, $context, $submission_id) {
         }
 
         echo $OUTPUT->box_end();
+
+        if ($progassessment->saenabled) {
+            // static analysis
+            echo $OUTPUT->heading(get_string('titlesa', 'progassessment'), 3, 'main trigger expanded');
+            echo $OUTPUT->box_start('generalbox', 'intro');
+            
+            echo '<b><big><center>'.$submission->sagrade.'</b></big> '.
+                get_string('outof','progassessment')." 100</center>";
+                
+            echo $OUTPUT->box_end();
+        }
 
         //full test cases results
         echo $OUTPUT->heading(get_string('fulltestcasesresults', 'progassessment'), 3, 'main trigger expanded');

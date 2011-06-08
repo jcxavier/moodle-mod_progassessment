@@ -9,6 +9,6 @@
  * @package mod/progassessment
  */
 
-$module->version  = 2010060502;  // The current module version (Date: YYYYMMDDXX)
-$module->cron     = 0;           // Period for cron to check this module (secs)
+$module->version  = 2011022000;  // The current module version (Date: YYYYMMDDXX)
+$module->cron     = 1;           // Period for cron to check this module (secs)
 ?>
