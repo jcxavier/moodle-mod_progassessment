@@ -270,7 +270,7 @@ function progassessment_cron () {
                 $DB->set_field('progassessment_submissions', "sagrade", $sagrade, array("id" => $p->submission));
             
                 $temp = $submission->grade + $weight;
-                $grade = (int)($temp * ((100.0 - $progassessment->sagrade) / 100.0) + $sagrade * ($progassessment->sagrade / 100.0));
+                $grade = (int)($temp * ((100.0 - $progassessment->sagrade) / 100.0) + $sagrade * ($progassessment->maxgrade / 100.0) * ($progassessment->sagrade / 100.0));
             }
             else
                 $grade = $submission->grade + $weight;
